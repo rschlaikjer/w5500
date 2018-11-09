@@ -25,8 +25,8 @@ namespace W5500 {
     // Most significant bytes are stored in lower indexes of multi-byte regs.
     class Register {
         public:
-            explicit Register(uint8_t offset, uint8_t size=1) :
-                offset(offset), size(size) {}
+            explicit Register(uint8_t off, uint8_t sz=1) :
+                offset(off), size(sz) {}
             const uint8_t offset;
             const uint8_t size;
     };
