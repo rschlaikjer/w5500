@@ -3,10 +3,39 @@
 namespace W5500 {
 
 void W5500::init() {
+    _bus.init();
 }
 
 void W5500::set_mac(uint8_t mac[6]) {
     write_register(Registers::Common::SourceHardwareAddress, mac);
+}
+
+void W5500::set_gateway(uint8_t ip[4]) {
+    write_register(Registers::Common::GatewayAddress, ip);
+}
+
+void W5500::set_subnet_mask(uint8_t mask[4]) {
+    write_register(Registers::Common::SubnetMaskAddress, mask);
+}
+
+void W5500::set_ip(uint8_t ip[4]) {
+    write_register(Registers::Common::SourceIpAddress, ip);
+}
+
+void W5500::get_mac(uint8_t mac[6]) {
+    read_register(Registers::Common::SourceHardwareAddress, mac);
+}
+
+void W5500::get_gateway(uint8_t ip[4]) {
+    read_register(Registers::Common::GatewayAddress, ip);
+}
+
+void W5500::get_subnet_mask(uint8_t mask[4]) {
+    read_register(Registers::Common::SubnetMaskAddress, mask);
+}
+
+void W5500::get_ip(uint8_t ip[4]) {
+    read_register(Registers::Common::SourceIpAddress, ip);
 }
 
 void W5500::write_register(CommonRegister reg, uint8_t *data) {

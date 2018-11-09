@@ -19,9 +19,14 @@ namespace W5500 {
             uint8_t get_version();
 
             void set_mac(uint8_t mac[6]);
-            void set_gateway(uint8_t ip[4]);
+            void get_mac(uint8_t mac[6]);
+            void set_gateway(uint8_t gwip[4]);
+            void get_gateway(uint8_t gwip[4]);
             void set_subnet_mask(uint8_t mask[4]);
-            void set_ip(uint8_t mask[4]);
+            void get_subnet_mask(uint8_t mask[4]);
+            void set_ip(uint8_t ip[4]);
+            void get_ip(uint8_t ip[4]);
+
             void set_interrupt_mask(
                 std::initializer_list<Registers::Common::InterruptMaskFlags> flags);
             bool has_interrupt_flag(Registers::Common::InterruptMaskFlags flag);
