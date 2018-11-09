@@ -38,27 +38,27 @@ namespace W5500 {
 
         // Common register block
         namespace Common {
-            CommonRegister Mode{0x00};
-            CommonRegister GatewayAddress{0x01, 4};
-            CommonRegister SubnetMaskAddress{0x05, 4};
-            CommonRegister SourceHardwareAddress{0x09, 6};
-            CommonRegister SourceIpAddress{0x0F, 4};
-            CommonRegister InterruptLevel{0x13, 2};
-            CommonRegister Interrupt{0x15};
-            CommonRegister InterruptMask{0x16};
-            CommonRegister SocketInterrupt{0x17};
-            CommonRegister SocketInterruptMask{0x18};
-            CommonRegister RetryTime{0x19, 2};
-            CommonRegister RetryCount{0x1B};
-            CommonRegister PPPLCPRequestTimer{0x1C};
-            CommonRegister PPPLCPRequestMagic{0x1D};
-            CommonRegister PPPDestinationMAC{0x1E, 6};
-            CommonRegister PPPSessionId{0x24, 2};
-            CommonRegister PPPMaxSegmentSize{0x26, 2};
-            CommonRegister UnreachableIP{0x28, 4};
-            CommonRegister UnreachablePort{0x2C, 2};
-            CommonRegister PhyConfig{0x2E};
-            CommonRegister ChipVersion{0x39};
+            static CommonRegister Mode{0x00};
+            static CommonRegister GatewayAddress{0x01, 4};
+            static CommonRegister SubnetMaskAddress{0x05, 4};
+            static CommonRegister SourceHardwareAddress{0x09, 6};
+            static CommonRegister SourceIpAddress{0x0F, 4};
+            static CommonRegister InterruptLevel{0x13, 2};
+            static CommonRegister Interrupt{0x15};
+            static CommonRegister InterruptMask{0x16};
+            static CommonRegister SocketInterrupt{0x17};
+            static CommonRegister SocketInterruptMask{0x18};
+            static CommonRegister RetryTime{0x19, 2};
+            static CommonRegister RetryCount{0x1B};
+            static CommonRegister PPPLCPRequestTimer{0x1C};
+            static CommonRegister PPPLCPRequestMagic{0x1D};
+            static CommonRegister PPPDestinationMAC{0x1E, 6};
+            static CommonRegister PPPSessionId{0x24, 2};
+            static CommonRegister PPPMaxSegmentSize{0x26, 2};
+            static CommonRegister UnreachableIP{0x28, 4};
+            static CommonRegister UnreachablePort{0x2C, 2};
+            static CommonRegister PhyConfig{0x2E};
+            static CommonRegister ChipVersion{0x39};
 
             enum class ModeFlags : uint8_t {
                 // If set to 1, registers will be initialized.
@@ -113,28 +113,28 @@ namespace W5500 {
 
         // Socket register block
         namespace Socket {
-            SocketRegister Mode{0x0};
-            SocketRegister Command{0x01};
-            SocketRegister Interrupt{0x02};
-            SocketRegister Status{0x03};
-            SocketRegister SourcePort{0x04, 2};
-            SocketRegister DestHardwareAddress{0x06, 6};
-            SocketRegister DestIPAddress{0x0c, 4};
-            SocketRegister DestPort{0x10, 2};
-            SocketRegister MaxSegmentSize{0x12, 2};
-            SocketRegister IP_TOS{0x15};
-            SocketRegister IP_TTL{0x16};
-            SocketRegister RxBufferSize{0x1E};
-            SocketRegister TxBufferSize{0x1F};
-            SocketRegister TxFreeSize{0x20, 2};
-            SocketRegister TxReadPointer{0x22, 2};
-            SocketRegister TxWritePointer{0x24, 2};
-            SocketRegister RxReceivedSize{0x26, 2};
-            SocketRegister RxReadPointer{0x28, 2};
-            SocketRegister RxWritePointer{0x2A, 2};
-            SocketRegister InterruptMask{0x2C};
-            SocketRegister FragmentOffset{0x2D, 2};
-            SocketRegister KeepAliveTimer{0x2F};
+            static SocketRegister Mode{0x0};
+            static SocketRegister Command{0x01};
+            static SocketRegister Interrupt{0x02};
+            static SocketRegister Status{0x03};
+            static SocketRegister SourcePort{0x04, 2};
+            static SocketRegister DestHardwareAddress{0x06, 6};
+            static SocketRegister DestIPAddress{0x0c, 4};
+            static SocketRegister DestPort{0x10, 2};
+            static SocketRegister MaxSegmentSize{0x12, 2};
+            static SocketRegister IP_TOS{0x15};
+            static SocketRegister IP_TTL{0x16};
+            static SocketRegister RxBufferSize{0x1E};
+            static SocketRegister TxBufferSize{0x1F};
+            static SocketRegister TxFreeSize{0x20, 2};
+            static SocketRegister TxReadPointer{0x22, 2};
+            static SocketRegister TxWritePointer{0x24, 2};
+            static SocketRegister RxReceivedSize{0x26, 2};
+            static SocketRegister RxReadPointer{0x28, 2};
+            static SocketRegister RxWritePointer{0x2A, 2};
+            static SocketRegister InterruptMask{0x2C};
+            static SocketRegister FragmentOffset{0x2D, 2};
+            static SocketRegister KeepAliveTimer{0x2F};
 
             enum class ModeFlags : uint8_t {
                 // In UDP mode, 0 disables / 1 enables multicast
