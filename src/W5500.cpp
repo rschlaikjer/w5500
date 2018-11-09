@@ -98,4 +98,9 @@ bool W5500::has_interrupt_flag(Registers::Common::InterruptMaskFlags flag) {
 
 }
 
+uint8_t W5500::get_version() {
+    uint8_t version;
+    read_register(Registers::Common::ChipVersion, &version);
+    return version;
+}
 }

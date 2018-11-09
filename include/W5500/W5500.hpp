@@ -16,6 +16,8 @@ namespace W5500 {
             W5500(Bus& bus) : _bus(bus) {}
             void init();
 
+            uint8_t get_version();
+
             void set_mac(uint8_t mac[6]);
             void set_gateway(uint8_t ip[4]);
             void set_subnet_mask(uint8_t mask[4]);
