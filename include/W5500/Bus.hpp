@@ -9,6 +9,11 @@ namespace W5500 {
 
     class Bus {
         public:
+            virtual ~Bus() = default;
+
+            // Optional initializiation step
+            virtual void init() {};
+
             // SPI read/write method. Must be implemented by end user
             virtual void spi_xfer(uint8_t send, uint8_t *recv) = 0;
 
