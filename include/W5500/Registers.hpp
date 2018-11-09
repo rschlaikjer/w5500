@@ -20,6 +20,13 @@ namespace W5500 {
         return socket_n * 4 + 2;
     }
 
+    enum class SocketMode : uint8_t {
+        CLOSED = 0b0000,
+        TCP    = 0b0001,
+        UDP    = 0b0010,
+        MACRAW = 0b0100 // Socket 0 only
+    };
+
     // Register deinitions.
     // All registers have an offset into the bank, and a size in bytes.
     // Most significant bytes are stored in lower indexes of multi-byte regs.
