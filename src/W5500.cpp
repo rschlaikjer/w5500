@@ -38,6 +38,51 @@ void W5500::get_ip(uint8_t ip[4]) {
     read_register(Registers::Common::SourceIpAddress, ip);
 }
 
+uint8_t W5500::get_interrupt_state() {
+    uint8_t val;
+    read_register(Registers::Common::Interrupt, &val);
+    return val;
+}
+
+bool W5500::link_up() {
+    uint8_t val;
+    read_register(Registers::Common::PhyConfig, &val);
+    return val & static_cast<uint8_t>(Registers::Common::PhyConfigFlags::LINK_STATUS);
+}
+
+uint8_t W5500::get_socket_interrupts(uint8_t socket) {
+    uint8_t val;
+    read_register(Registers::Socket::Interrupt, socket, &val);
+    return val;
+}
+
+Registers::Socket::StatusValue W5500::get_socket_status(uint8_t socket) {
+    uint8_t val;
+    read_register(Registers::Socket::Status, socket, &val);
+    return Registers::Socket::StatusValue(val);
+}
+
+void W5500::set_socket_mode(uint8_t socket, SocketMode mode) {
+    uint8_t val = static_cast<uint8_t>(mode);
+    write_register(Registers::Socket::Mode, socket, &val);
+}
+
+void W5500::send_socket_command(uint8_t socket, Registers::Socket::CommandValue command) {
+    uint8_t val = static_cast<uint8_t>(command);
+    write_register(Registers::Socket::Command, socket, &val);
+}
+
+void W5500::set_socket_dest_ip_address(uint8_t socket, uint8_t target_ip[4]) {
+    write_register(Registers::Socket::DestIPAddress, socket, target_ip);
+}
+
+void W5500::set_socket_dest_port(uint8_t socket, uint16_t port) {
+    uint8_t port_8[2];
+    port_8[0] = (port >> 8) & 0xFF;
+    port_8[1] = port & 0xFF;
+    write_register(Registers::Socket::DestPort, socket, port_8);
+}
+
 void W5500::write_register(CommonRegister reg, uint8_t *data) {
     const uint8_t cmd_size = 3 + reg.size;
     uint8_t cmd[cmd_size];

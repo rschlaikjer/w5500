@@ -27,9 +27,18 @@ namespace W5500 {
             void set_ip(uint8_t ip[4]);
             void get_ip(uint8_t ip[4]);
 
+            bool link_up();
+            Registers::Socket::StatusValue get_socket_status(uint8_t socket);
+            uint8_t get_socket_interrupts(uint8_t socket);
+
             void set_interrupt_mask(
                 std::initializer_list<Registers::Common::InterruptMaskFlags> flags);
+            uint8_t get_interrupt_state();
             bool has_interrupt_flag(Registers::Common::InterruptMaskFlags flag);
+            void set_socket_mode(uint8_t socket, SocketMode mode);
+            void send_socket_command(uint8_t socket, Registers::Socket::CommandValue command);
+            void set_socket_dest_ip_address(uint8_t socket, uint8_t target_ip[4]);
+            void set_socket_dest_port(uint8_t socket, uint16_t port);
 
         private:
             Bus& _bus;
