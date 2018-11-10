@@ -21,18 +21,10 @@ namespace W5500 {
 
             void increment_write_pointer(uint16_t amount) {
                 write_ptr += amount;
-                const uint16_t max_size = static_cast<uint16_t>(tx_buffer_size) << 10;
-                if (write_ptr > max_size) {
-                    write_ptr = write_ptr % max_size;
-                }
             }
 
             void increment_read_pointer(uint16_t amount) {
                 read_ptr += amount;
-                const uint16_t max_size = static_cast<uint16_t>(tx_buffer_size) << 10;
-                if (read_ptr > max_size) {
-                    read_ptr = read_ptr % max_size;
-                }
             }
 
             friend class W5500;
