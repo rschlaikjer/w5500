@@ -220,11 +220,39 @@ uint8_t W5500::get_version() {
     return version;
 }
 
-void W5500::write(uint8_t socket, const uint8_t *buffer, size_t size) {
-    // Copy data to a socket's transmit buffer
+void W5500::send(uint8_t socket) {
+    // Send with no args: flush any pending data in the TX buffer.
+    // If the tx read pointer == the write pointer, a send would send nothing.
+    if (get_tx_read_pointer(socket) == _socket_info[socket].write_ptr) {
+        return;
+    }
+
+    // Trigger a send.
+    send_socket_command(socket, Registers::Socket::CommandValue::SEND);
+}
+
+size_t W5500::send(uint8_t socket, const uint8_t *buffer, size_t size) {
+    // Send with arguments: copy the data to the IC using write(), then
+    // immediately trigger a flush.
+    const size_t written = write(socket, buffer, size);
+    send_socket_command(socket, Registers::Socket::CommandValue::SEND);
+    return written;
+}
+
+size_t W5500::write(uint8_t socket, const uint8_t *buffer, size_t size) {
+    // Get max possible tx size
+    const uint16_t free_buffer_size = get_tx_free_size(socket);
+
+    // If the buffer is full just don't even try
+    if (free_buffer_size == 0) {
+        return 0;
+    }
+
+    // Set up the write transaction
     uint8_t cmd[3];
-    cmd[0] = (_write_ptr[socket] >> 8) & 0xFF;
-    cmd[1] = _write_ptr[socket] & 0xFF;
+    uint16_t write_offset = _socket_info[socket].write_ptr;
+    cmd[0] = (write_offset >> 8) & 0xFF;
+    cmd[1] = write_offset & 0xFF;
     cmd[2] = (
         (SOCKET_TX_BUFFER(socket) << 3) |
         (1 << 2) | // Write
@@ -235,48 +263,58 @@ void W5500::write(uint8_t socket, const uint8_t *buffer, size_t size) {
     // Initiate the write
     _bus.spi_xfer(cmd, nullptr, 3);
 
-    // Send the data
-    _bus.spi_xfer(buffer, nullptr, size);
+    // Send as much data as we can
+    const uint16_t bytes_to_send = (size <= free_buffer_size ? size : free_buffer_size);
+    _bus.spi_xfer(buffer, nullptr, bytes_to_send);
 
     // Increment local write pointer
-    _write_ptr[socket] += size;
+    _socket_info[socket].increment_write_pointer(bytes_to_send);
 
     // Done
     _bus.chip_deselect();
 
     // Update the socket TX write pointer register
-    cmd[0] = (_write_ptr[socket] >> 8) & 0xFF;
-    cmd[1] = _write_ptr[socket] & 0xFF;
-    write_register(Registers::Socket::TxWritePointer, socket, cmd);
+    write_register_u16(Registers::Socket::TxWritePointer, socket, _socket_info[socket].write_ptr);
+
+    // Return the amount of bytes that were actually sent
+    return bytes_to_send;
 }
 
-void W5500::end_packet(uint8_t socket) {
-    // Update the write pointer to actually send buffered data
-    send_socket_command(socket, Registers::Socket::CommandValue::SEND);
+uint16_t W5500::read_register_u16(SocketRegister reg, uint8_t socket) {
+    uint8_t buf[2];
+    read_register(reg, socket, buf);
+    return buf[0] << 8 | buf[1];
+}
+
+void W5500::write_register_u16(SocketRegister reg, uint8_t socket, uint16_t value) {
+    uint8_t buf[2];
+    buf[0] = (value >> 8) & 0xFF;
+    buf[1] = value & 0xFF;
+    write_register(reg, socket, buf);
+}
+
+uint16_t W5500::get_tx_free_size(uint8_t socket) {
+    return read_register_u16(Registers::Socket::TxFreeSize, socket);
 }
 
 uint16_t W5500::get_tx_read_pointer(uint8_t socket) {
-    uint8_t buf[2];
-    read_register(Registers::Socket::TxReadPointer, socket, buf);
-    return buf[0] << 8 | buf[1];
+    return read_register_u16(Registers::Socket::TxReadPointer, socket);
 }
 
 uint16_t W5500::get_tx_write_pointer(uint8_t socket) {
-    uint8_t buf[2];
-    read_register(Registers::Socket::TxWritePointer, socket, buf);
-    return buf[0] << 8 | buf[1];
+    return read_register_u16(Registers::Socket::TxWritePointer, socket);
+}
+
+uint16_t W5500::get_rx_byte_count(uint8_t socket) {
+    return read_register_u16(Registers::Socket::RxReceivedSize, socket);
 }
 
 uint16_t W5500::get_rx_read_pointer(uint8_t socket) {
-    uint8_t buf[2];
-    read_register(Registers::Socket::RxReadPointer, socket, buf);
-    return buf[0] << 8 | buf[1];
+    return read_register_u16(Registers::Socket::RxReadPointer, socket);
 }
 
 uint16_t W5500::get_rx_write_pointer(uint8_t socket) {
-    uint8_t buf[2];
-    read_register(Registers::Socket::RxWritePointer, socket, buf);
-    return buf[0] << 8 | buf[1];
+    return read_register_u16(Registers::Socket::RxWritePointer, socket);
 }
 
 } // namespace W5500

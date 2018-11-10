@@ -13,6 +13,31 @@ namespace W5500 {
 
     static const size_t max_sockets = 8;
 
+    class SocketInfo {
+        protected:
+            uint16_t write_ptr = 0;
+            uint16_t read_ptr = 0;
+            Registers::Socket::BufferSize tx_buffer_size = Registers::Socket::BufferSize::SZ_2K;
+
+            void increment_write_pointer(uint16_t amount) {
+                write_ptr += amount;
+                const uint16_t max_size = static_cast<uint16_t>(tx_buffer_size) << 10;
+                if (write_ptr > max_size) {
+                    write_ptr = write_ptr % max_size;
+                }
+            }
+
+            void increment_read_pointer(uint16_t amount) {
+                read_ptr += amount;
+                const uint16_t max_size = static_cast<uint16_t>(tx_buffer_size) << 10;
+                if (read_ptr > max_size) {
+                    read_ptr = read_ptr % max_size;
+                }
+            }
+
+            friend class W5500;
+    };
+
     class W5500 {
         public:
             W5500(Bus& bus) : _bus(bus) {}
@@ -49,25 +74,32 @@ namespace W5500 {
             void set_socket_dest_port(uint8_t socket, uint16_t port);
             void set_socket_src_port(uint8_t socket, uint16_t port);
 
+            uint16_t get_tx_free_size(uint8_t socket);
             uint16_t get_tx_read_pointer(uint8_t socket);
             uint16_t get_tx_write_pointer(uint8_t socket);
+            uint16_t get_rx_byte_count(uint8_t socket);
             uint16_t get_rx_read_pointer(uint8_t socket);
             uint16_t get_rx_write_pointer(uint8_t socket);
 
-            void write(uint8_t socket, const uint8_t *buffer, size_t size);
-            void end_packet(uint8_t socket);
+            // Trigger a flush of data written to buffer
+            void send(uint8_t socket);
+            // Write data to buffer and immediately trigger send
+            size_t send(uint8_t socket, const uint8_t *buffer, size_t size);
+            // Write data to buffer but do NOT automatically trigger send
+            size_t write(uint8_t socket, const uint8_t *buffer, size_t size);
 
         private:
             Bus& _bus;
 
-            // Cached buffer offsets for each socket
-            uint16_t _write_ptr[max_sockets] = {0};
-            uint16_t _read_ptr[max_sockets] = {0};
+            // Local socket info
+            SocketInfo _socket_info[max_sockets];
 
             void write_register(CommonRegister reg, uint8_t *data);
             void write_register(SocketRegister reg, uint8_t socket_n, uint8_t *data);
+            void write_register_u16(SocketRegister reg, uint8_t socket, uint16_t value);
             void read_register(CommonRegister reg, uint8_t *data);
             void read_register(SocketRegister reg, uint8_t socket_n, uint8_t *data);
+            uint16_t read_register_u16(SocketRegister reg, uint8_t socket);
     };
 
 }

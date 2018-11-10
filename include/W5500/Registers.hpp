@@ -248,6 +248,15 @@ namespace W5500 {
                 // Socket is in MACRAW mode
                 MACEAW = 0x42
             };
+
+            enum class BufferSize : uint8_t {
+                SZ_ZERO = 0,
+                SZ_1K = 0x01,
+                SZ_2K = 0x02,
+                SZ_4K = 0x04,
+                SZ_8K = 0x08,
+                SZ_16K = 0x10
+            };
         }
     }
 }

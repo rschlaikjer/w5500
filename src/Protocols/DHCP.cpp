@@ -100,7 +100,8 @@ namespace W5500 {
         buffer[8] = static_cast<uint8_t>(DhcpOption::END_OPTIONS);
         _driver.write(_socket, buffer, 9);
 
-        _driver.end_packet(_socket);
+        // Trigger a send of the buffered command
+        _driver.send(_socket);
     }
 
     void Client::embed_u16(uint8_t *buffer, uint16_t value) {
