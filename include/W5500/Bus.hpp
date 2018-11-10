@@ -26,7 +26,7 @@ namespace W5500 {
             // If send is nullptr, zeros will be sent.
             // If recv is nullptr, received data will be ignored.
             // If both arrays are present, both _must_ be of at least size count
-            void spi_xfer(uint8_t *send, uint8_t *recv, size_t count) {
+            void spi_xfer(const uint8_t *send, uint8_t *recv, size_t count) {
                 // If you're not sending or receiving anything, why are you here
                 if (send == nullptr && recv == nullptr) {
                     return;

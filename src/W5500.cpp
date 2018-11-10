@@ -83,6 +83,48 @@ void W5500::set_socket_dest_port(uint8_t socket, uint16_t port) {
     write_register(Registers::Socket::DestPort, socket, port_8);
 }
 
+void W5500::set_socket_src_port(uint8_t socket, uint16_t port) {
+    uint8_t port_8[2];
+    port_8[0] = (port >> 8) & 0xFF;
+    port_8[1] = port & 0xFF;
+    write_register(Registers::Socket::SourcePort, socket, port_8);
+}
+
+void W5500::reset() {
+    // Set soft reset bit
+    uint8_t flag = static_cast<uint8_t>(Registers::Common::ModeFlags::RESET);
+    write_register(Registers::Common::Mode, &flag);
+
+    // Wait for reset to complete
+    do {
+        read_register(Registers::Common::Mode, &flag);
+    } while (flag & static_cast<uint8_t>(Registers::Common::ModeFlags::RESET));
+}
+
+void W5500::set_force_arp(bool enable) {
+    // Get current reg value
+    uint8_t flag;
+    read_register(Registers::Common::Mode, &flag);
+
+    // Set/clear FARP bit
+    if (enable) {
+        flag |= static_cast<uint8_t>(Registers::Common::ModeFlags::FORCE_ARP);
+    } else {
+        flag &= ~static_cast<uint8_t>(Registers::Common::ModeFlags::FORCE_ARP);
+    }
+
+    // Write register back
+    write_register(Registers::Common::Mode, &flag);
+}
+
+void W5500::set_socket_dest_mac(uint8_t socket, uint8_t mac[6]) {
+    write_register(Registers::Socket::DestHardwareAddress, socket, mac);
+}
+
+void W5500::get_socket_dest_mac(uint8_t socket, uint8_t mac[6]) {
+    read_register(Registers::Socket::DestHardwareAddress, socket, mac);
+}
+
 void W5500::write_register(CommonRegister reg, uint8_t *data) {
     const uint8_t cmd_size = 3 + reg.size;
     uint8_t cmd[cmd_size];
@@ -169,7 +211,7 @@ void W5500::set_interrupt_mask(
 }
 
 bool W5500::has_interrupt_flag(Registers::Common::InterruptMaskFlags flag) {
-
+    return false;
 }
 
 uint8_t W5500::get_version() {
@@ -177,4 +219,64 @@ uint8_t W5500::get_version() {
     read_register(Registers::Common::ChipVersion, &version);
     return version;
 }
+
+void W5500::write(uint8_t socket, const uint8_t *buffer, size_t size) {
+    // Copy data to a socket's transmit buffer
+    uint8_t cmd[3];
+    cmd[0] = (_write_ptr[socket] >> 8) & 0xFF;
+    cmd[1] = _write_ptr[socket] & 0xFF;
+    cmd[2] = (
+        (SOCKET_TX_BUFFER(socket) << 3) |
+        (1 << 2) | // Write
+        0x0 // Always use VDM mode
+    );
+    _bus.chip_select();
+
+    // Initiate the write
+    _bus.spi_xfer(cmd, nullptr, 3);
+
+    // Send the data
+    _bus.spi_xfer(buffer, nullptr, size);
+
+    // Increment local write pointer
+    _write_ptr[socket] += size;
+
+    // Done
+    _bus.chip_deselect();
+
+    // Update the socket TX write pointer register
+    cmd[0] = (_write_ptr[socket] >> 8) & 0xFF;
+    cmd[1] = _write_ptr[socket] & 0xFF;
+    write_register(Registers::Socket::TxWritePointer, socket, cmd);
 }
+
+void W5500::end_packet(uint8_t socket) {
+    // Update the write pointer to actually send buffered data
+    send_socket_command(socket, Registers::Socket::CommandValue::SEND);
+}
+
+uint16_t W5500::get_tx_read_pointer(uint8_t socket) {
+    uint8_t buf[2];
+    read_register(Registers::Socket::TxReadPointer, socket, buf);
+    return buf[0] << 8 | buf[1];
+}
+
+uint16_t W5500::get_tx_write_pointer(uint8_t socket) {
+    uint8_t buf[2];
+    read_register(Registers::Socket::TxWritePointer, socket, buf);
+    return buf[0] << 8 | buf[1];
+}
+
+uint16_t W5500::get_rx_read_pointer(uint8_t socket) {
+    uint8_t buf[2];
+    read_register(Registers::Socket::RxReadPointer, socket, buf);
+    return buf[0] << 8 | buf[1];
+}
+
+uint16_t W5500::get_rx_write_pointer(uint8_t socket) {
+    uint8_t buf[2];
+    read_register(Registers::Socket::RxWritePointer, socket, buf);
+    return buf[0] << 8 | buf[1];
+}
+
+} // namespace W5500

@@ -11,12 +11,17 @@
 
 namespace W5500 {
 
+    static const size_t max_sockets = 8;
+
     class W5500 {
         public:
             W5500(Bus& bus) : _bus(bus) {}
             void init();
 
+            void reset();
             uint8_t get_version();
+
+            void set_force_arp(bool enable);
 
             void set_mac(uint8_t mac[6]);
             void get_mac(uint8_t mac[6]);
@@ -35,13 +40,29 @@ namespace W5500 {
                 std::initializer_list<Registers::Common::InterruptMaskFlags> flags);
             uint8_t get_interrupt_state();
             bool has_interrupt_flag(Registers::Common::InterruptMaskFlags flag);
+
             void set_socket_mode(uint8_t socket, SocketMode mode);
             void send_socket_command(uint8_t socket, Registers::Socket::CommandValue command);
             void set_socket_dest_ip_address(uint8_t socket, uint8_t target_ip[4]);
+            void set_socket_dest_mac(uint8_t socket, uint8_t mac[6]);
+            void get_socket_dest_mac(uint8_t socket, uint8_t mac[6]);
             void set_socket_dest_port(uint8_t socket, uint16_t port);
+            void set_socket_src_port(uint8_t socket, uint16_t port);
+
+            uint16_t get_tx_read_pointer(uint8_t socket);
+            uint16_t get_tx_write_pointer(uint8_t socket);
+            uint16_t get_rx_read_pointer(uint8_t socket);
+            uint16_t get_rx_write_pointer(uint8_t socket);
+
+            void write(uint8_t socket, const uint8_t *buffer, size_t size);
+            void end_packet(uint8_t socket);
 
         private:
             Bus& _bus;
+
+            // Cached buffer offsets for each socket
+            uint16_t _write_ptr[max_sockets] = {0};
+            uint16_t _read_ptr[max_sockets] = {0};
 
             void write_register(CommonRegister reg, uint8_t *data);
             void write_register(SocketRegister reg, uint8_t socket_n, uint8_t *data);
