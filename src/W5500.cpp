@@ -38,12 +38,6 @@ void W5500::get_ip(uint8_t ip[4]) {
     read_register(Registers::Common::SourceIpAddress, ip);
 }
 
-uint8_t W5500::get_interrupt_state() {
-    uint8_t val;
-    read_register(Registers::Common::Interrupt, &val);
-    return val;
-}
-
 bool W5500::link_up() {
     uint8_t val;
     read_register(Registers::Common::PhyConfig, &val);
@@ -249,8 +243,19 @@ void W5500::set_interrupt_mask(
     write_register(Registers::Common::InterruptMask, &mask);
 }
 
-bool W5500::has_interrupt_flag(Registers::Common::InterruptMaskFlags flag) {
-    return false;
+Registers::Common::InterruptRegisterValue W5500::get_interrupt_state() {
+    uint8_t val;
+    read_register(Registers::Common::Interrupt, &val);
+    return Registers::Common::InterruptRegisterValue(val);
+}
+
+bool W5500::has_interrupt_flag(Registers::Common::InterruptFlags flag) {
+    return get_interrupt_state() & flag;
+}
+
+void W5500::clear_interrupt_flag(Registers::Common::InterruptFlags flag) {
+    uint8_t val = static_cast<uint8_t>(flag);
+    write_register(Registers::Common::Interrupt, &val);
 }
 
 uint8_t W5500::get_version() {

@@ -55,8 +55,9 @@ namespace W5500 {
             // General interrupts
             void set_interrupt_mask(
                 std::initializer_list<Registers::Common::InterruptMaskFlags> flags);
-            uint8_t get_interrupt_state();
-            bool has_interrupt_flag(Registers::Common::InterruptMaskFlags flag);
+            Registers::Common::InterruptRegisterValue get_interrupt_state();
+            bool has_interrupt_flag(Registers::Common::InterruptFlags flag);
+            void clear_interrupt_flag(Registers::Common::InterruptFlags flag);
 
             // Socket connection handling
             int open_socket(SocketMode mode);

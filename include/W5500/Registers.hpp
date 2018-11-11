@@ -96,6 +96,17 @@ namespace W5500 {
                 MAGIC_PACKET = (1 << 4)
             };
 
+            class InterruptRegisterValue {
+                public:
+                    InterruptRegisterValue(uint8_t flags) : _flags(flags) {}
+                    bool operator &(InterruptFlags flag) {
+                        return _flags & static_cast<uint8_t>(flag);
+                    }
+
+                private:
+                    const uint8_t _flags;
+            };
+
             enum class InterruptMaskFlags : uint8_t {
                 // Masked (0) interrupts will not trigger.
                 IP_CONFLICT = (1 << 7),
