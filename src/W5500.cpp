@@ -50,16 +50,55 @@ bool W5500::link_up() {
     return val & static_cast<uint8_t>(Registers::Common::PhyConfigFlags::LINK_STATUS);
 }
 
-uint8_t W5500::get_socket_interrupts(uint8_t socket) {
-    uint8_t val;
-    read_register(Registers::Socket::Interrupt, socket, &val);
-    return val;
-}
-
 Registers::Socket::StatusValue W5500::get_socket_status(uint8_t socket) {
     uint8_t val;
     read_register(Registers::Socket::Status, socket, &val);
     return Registers::Socket::StatusValue(val);
+}
+
+int W5500::open_socket(SocketMode mode) {
+    size_t sock;
+    // Find first open socket
+    for (sock = 0; sock < max_sockets; sock++) {
+        if (!_socket_info[sock].opened) {
+            break;
+        }
+    }
+
+    // All sockets open, cannot open another
+    if (sock == max_sockets) {
+        return -1;
+    }
+
+    // Mark socket as open
+    _socket_info[sock].opened = true;
+
+    // Set the socket mode
+    set_socket_mode(sock, mode);
+
+    // Ask the W5500 to actually open the socket
+    send_socket_command(sock, Registers::Socket::CommandValue::OPEN);
+
+    // Return the socket id
+    return sock;
+}
+
+void W5500::close_socket(uint8_t sock) {
+    // Bounds check
+    if (sock >= max_sockets) {
+        return;
+    }
+
+    // If socket not open, do nothing
+    if (!_socket_info[sock].opened) {
+        return;
+    }
+
+    // Ask W5500 to close socket
+    send_socket_command(sock, Registers::Socket::CommandValue::CLOSE);
+
+    // Mark socket closed
+    _socket_info[sock].opened = false;
 }
 
 void W5500::set_socket_mode(uint8_t socket, SocketMode mode) {
