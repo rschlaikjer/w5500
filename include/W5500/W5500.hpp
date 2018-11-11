@@ -58,6 +58,7 @@ namespace W5500 {
             Registers::Common::InterruptRegisterValue get_interrupt_state();
             bool has_interrupt_flag(Registers::Common::InterruptFlags flag);
             void clear_interrupt_flag(Registers::Common::InterruptFlags flag);
+            uint8_t get_socket_interrupt_state();
 
             // Socket connection handling
             int open_socket(SocketMode mode);
@@ -99,9 +100,16 @@ namespace W5500 {
 
             void write_register(CommonRegister reg, uint8_t *data);
             void write_register(SocketRegister reg, uint8_t socket_n, uint8_t *data);
+            void write_register_u8(CommonRegister reg, uint8_t value);
+            void write_register_u8(SocketRegister reg, uint8_t socket, uint8_t value);
+            void write_register_u16(CommonRegister reg, uint16_t value);
             void write_register_u16(SocketRegister reg, uint8_t socket, uint16_t value);
+
             void read_register(CommonRegister reg, uint8_t *data);
             void read_register(SocketRegister reg, uint8_t socket_n, uint8_t *data);
+            uint16_t read_register_u8(CommonRegister reg);
+            uint16_t read_register_u8(SocketRegister reg, uint8_t socket);
+            uint16_t read_register_u16(CommonRegister reg);
             uint16_t read_register_u16(SocketRegister reg, uint8_t socket);
     };
 

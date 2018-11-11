@@ -45,9 +45,8 @@ bool W5500::link_up() {
 }
 
 Registers::Socket::StatusValue W5500::get_socket_status(uint8_t socket) {
-    uint8_t val;
-    read_register(Registers::Socket::Status, socket, &val);
-    return Registers::Socket::StatusValue(val);
+    return Registers::Socket::StatusValue(
+        read_register_u8(Registers::Socket::Status, socket));
 }
 
 int W5500::open_socket(SocketMode mode) {
@@ -96,13 +95,11 @@ void W5500::close_socket(uint8_t sock) {
 }
 
 void W5500::set_socket_mode(uint8_t socket, SocketMode mode) {
-    uint8_t val = static_cast<uint8_t>(mode);
-    write_register(Registers::Socket::Mode, socket, &val);
+    write_register_u8(Registers::Socket::Mode, socket, static_cast<uint8_t>(mode));
 }
 
 void W5500::send_socket_command(uint8_t socket, Registers::Socket::CommandValue command) {
-    uint8_t val = static_cast<uint8_t>(command);
-    write_register(Registers::Socket::Command, socket, &val);
+    write_register_u8(Registers::Socket::Command, socket, static_cast<uint8_t>(command));
 }
 
 void W5500::set_socket_dest_ip_address(uint8_t socket, uint8_t target_ip[4]) {
@@ -110,17 +107,11 @@ void W5500::set_socket_dest_ip_address(uint8_t socket, uint8_t target_ip[4]) {
 }
 
 void W5500::set_socket_dest_port(uint8_t socket, uint16_t port) {
-    uint8_t port_8[2];
-    port_8[0] = (port >> 8) & 0xFF;
-    port_8[1] = port & 0xFF;
-    write_register(Registers::Socket::DestPort, socket, port_8);
+    write_register_u16(Registers::Socket::DestPort, socket, port);
 }
 
 void W5500::set_socket_src_port(uint8_t socket, uint16_t port) {
-    uint8_t port_8[2];
-    port_8[0] = (port >> 8) & 0xFF;
-    port_8[1] = port & 0xFF;
-    write_register(Registers::Socket::SourcePort, socket, port_8);
+    write_register_u16(Registers::Socket::SourcePort, socket, port);
 }
 
 void W5500::reset() {
@@ -136,8 +127,7 @@ void W5500::reset() {
 
 void W5500::set_force_arp(bool enable) {
     // Get current reg value
-    uint8_t flag;
-    read_register(Registers::Common::Mode, &flag);
+    uint8_t flag = read_register_u8(Registers::Common::Mode);
 
     // Set/clear FARP bit
     if (enable) {
@@ -147,7 +137,7 @@ void W5500::set_force_arp(bool enable) {
     }
 
     // Write register back
-    write_register(Registers::Common::Mode, &flag);
+    write_register_u8(Registers::Common::Mode, flag);
 }
 
 void W5500::set_socket_dest_mac(uint8_t socket, uint8_t mac[6]) {
@@ -240,13 +230,12 @@ void W5500::set_interrupt_mask(
     for (auto flag : flags) {
         mask |= static_cast<uint8_t>(flag);
     }
-    write_register(Registers::Common::InterruptMask, &mask);
+    write_register_u8(Registers::Common::InterruptMask, mask);
 }
 
 Registers::Common::InterruptRegisterValue W5500::get_interrupt_state() {
-    uint8_t val;
-    read_register(Registers::Common::Interrupt, &val);
-    return Registers::Common::InterruptRegisterValue(val);
+    return Registers::Common::InterruptRegisterValue(
+        read_register_u8(Registers::Common::Interrupt));
 }
 
 bool W5500::has_interrupt_flag(Registers::Common::InterruptFlags flag) {
@@ -254,14 +243,15 @@ bool W5500::has_interrupt_flag(Registers::Common::InterruptFlags flag) {
 }
 
 void W5500::clear_interrupt_flag(Registers::Common::InterruptFlags flag) {
-    uint8_t val = static_cast<uint8_t>(flag);
-    write_register(Registers::Common::Interrupt, &val);
+    write_register_u8(Registers::Common::Interrupt, static_cast<uint8_t>(flag));
+}
+
+uint8_t W5500::get_socket_interrupt_state() {
+    return read_register_u8(Registers::Common::SocketInterrupt);
 }
 
 uint8_t W5500::get_version() {
-    uint8_t version;
-    read_register(Registers::Common::ChipVersion, &version);
-    return version;
+    return read_register_u8(Registers::Common::ChipVersion);
 }
 
 void W5500::send(uint8_t socket) {
@@ -324,10 +314,36 @@ size_t W5500::write(uint8_t socket, const uint8_t *buffer, size_t size) {
     return bytes_to_send;
 }
 
+uint16_t W5500::read_register_u8(CommonRegister reg) {
+    uint8_t val;
+    read_register(reg, &val);
+    return val;
+}
+
+uint16_t W5500::read_register_u8(SocketRegister reg, uint8_t socket) {
+    uint8_t val;
+    read_register(reg, socket, &val);
+    return val;
+}
+
+uint16_t W5500::read_register_u16(CommonRegister reg) {
+    uint8_t buf[2];
+    read_register(reg, buf);
+    return buf[0] << 8 | buf[1];
+}
+
 uint16_t W5500::read_register_u16(SocketRegister reg, uint8_t socket) {
     uint8_t buf[2];
     read_register(reg, socket, buf);
     return buf[0] << 8 | buf[1];
+}
+
+void W5500::write_register_u8(CommonRegister reg, uint8_t val) {
+    write_register(reg, &val);
+}
+
+void W5500::write_register_u8(SocketRegister reg, uint8_t socket, uint8_t val) {
+    write_register(reg, socket, &val);
 }
 
 void W5500::write_register_u16(SocketRegister reg, uint8_t socket, uint16_t value) {
@@ -362,8 +378,7 @@ uint16_t W5500::get_rx_write_pointer(uint8_t socket) {
 }
 
 Registers::Socket::InterruptRegisterValue W5500::get_socket_interrupt_flags(uint8_t socket) {
-    uint8_t val;
-    read_register(Registers::Socket::Interrupt, socket, &val);
+    const uint8_t val = read_register_u8(Registers::Socket::Interrupt, socket);
     return Registers::Socket::InterruptRegisterValue(val);
 }
 
@@ -372,8 +387,7 @@ bool W5500::socket_has_interrupt_flag(uint8_t socket, Registers::Socket::Interru
 }
 
 void W5500::clear_socket_iterrupt_flag(uint8_t socket, Registers::Socket::InterruptFlags flag) {
-    uint8_t val = static_cast<uint8_t>(flag);
-    write_register(Registers::Socket::Interrupt, socket, &val);
+    write_register_u8(Registers::Socket::Interrupt, socket, static_cast<uint8_t>(flag));
 }
 
 } // namespace W5500
