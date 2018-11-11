@@ -214,6 +214,17 @@ namespace W5500 {
                 CONNECT = (1 << 0)
             };
 
+            class InterruptRegisterValue {
+                public:
+                    InterruptRegisterValue(uint8_t flags) : _flags(flags) {}
+                    bool operator &(InterruptFlags flag) {
+                        return _flags & static_cast<uint8_t>(flag);
+                    }
+
+                private:
+                    const uint8_t _flags;
+            };
+
             enum class InterruptMaskFlags : uint8_t {
                 SEND_OK = (1 << 4),
                 TIMEOUT = (1 << 3),

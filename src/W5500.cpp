@@ -317,4 +317,19 @@ uint16_t W5500::get_rx_write_pointer(uint8_t socket) {
     return read_register_u16(Registers::Socket::RxWritePointer, socket);
 }
 
+Registers::Socket::InterruptRegisterValue W5500::get_socket_interrupt_flags(uint8_t socket) {
+    uint8_t val;
+    read_register(Registers::Socket::Interrupt, socket, &val);
+    return Registers::Socket::InterruptRegisterValue(val);
+}
+
+bool W5500::socket_has_interrupt_flag(uint8_t socket, Registers::Socket::InterruptFlags flag) {
+    return get_socket_interrupt_flags(socket) & flag;
+}
+
+void W5500::clear_socket_iterrupt_flag(uint8_t socket, Registers::Socket::InterruptFlags flag) {
+    uint8_t val = static_cast<uint8_t>(flag);
+    write_register(Registers::Socket::Interrupt, socket, &val);
+}
+
 } // namespace W5500

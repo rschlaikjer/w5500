@@ -66,12 +66,18 @@ namespace W5500 {
             void set_socket_dest_port(uint8_t socket, uint16_t port);
             void set_socket_src_port(uint8_t socket, uint16_t port);
 
+            // Socket TX/RX handling
             uint16_t get_tx_free_size(uint8_t socket);
             uint16_t get_tx_read_pointer(uint8_t socket);
             uint16_t get_tx_write_pointer(uint8_t socket);
             uint16_t get_rx_byte_count(uint8_t socket);
             uint16_t get_rx_read_pointer(uint8_t socket);
             uint16_t get_rx_write_pointer(uint8_t socket);
+
+            // Socket interrupts
+            Registers::Socket::InterruptRegisterValue get_socket_interrupt_flags(uint8_t socket);
+            bool socket_has_interrupt_flag(uint8_t socket, Registers::Socket::InterruptFlags flag);
+            void clear_socket_iterrupt_flag(uint8_t socket, Registers::Socket::InterruptFlags flag);
 
             // Trigger a flush of data written to buffer
             void send(uint8_t socket);
