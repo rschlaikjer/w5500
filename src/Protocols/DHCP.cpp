@@ -264,8 +264,7 @@ namespace W5500 {
         _driver.get_mac(&buffer[10]);
 
         // Host name
-        buffer[16] = 53; // Option: Host name
-        buffer[0] = static_cast<uint8_t>(DhcpOption::CLIENT_HOSTNAME);
+        buffer[16] = static_cast<uint8_t>(DhcpOption::CLIENT_HOSTNAME);
         uint8_t hostname_len = strlen(_hostname);
         buffer[17] = hostname_len;
         // Write buffer
