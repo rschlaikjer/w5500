@@ -96,6 +96,19 @@ namespace W5500 {
         uint16_t bytes_received = _driver.get_rx_byte_count(_socket);
         _driver.bus().log("Received %u bytes DHCP data\n", bytes_received);
 
+        // Read UDP header
+        uint8_t udp_header[8];
+        _driver.read(_socket, udp_header, sizeof(udp_header));
+        const uint16_t source_port = udp_header[4] << 8 | udp_header[5];
+        const uint16_t packet_size = udp_header[6] << 8 | udp_header[7];
+        _driver.bus().log("Got UDP packet from %u.%u.%u.%u port %u size %u\n",
+            udp_header[0], udp_header[1], udp_header[2], udp_header[3],
+            source_port, packet_size);
+
+        // Calculate the read pointer offset that ends this packet, so we can
+        // skip to the end when done
+        const uint16_t packet_end_offset = _driver.get_rx_read_pointer(_socket) + packet_size;
+
         // Read the fixed-size header
         uint8_t data[ParseContext::total_size];
         _driver.read(_socket, data, ParseContext::total_size);
@@ -105,8 +118,9 @@ namespace W5500 {
         size_t consumed = parsed.consume(data, ParseContext::total_size);
 
         // If the op is not BOOTREPLY, ignore the data.
-        if (parsed.op != 1) { // DHCP_BOOTREPLY) {
+        if (parsed.op != 2) { // DHCP_BOOTREPLY) {
             _driver.bus().log("Op is %u not BOOTREPLY< ignoring\n");
+            _driver.flush(_socket);
             return;
         }
 
@@ -117,6 +131,7 @@ namespace W5500 {
             _driver.bus().log("Mismatched MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
                 parsed.chaddr[0], parsed.chaddr[1], parsed.chaddr[2],
                 parsed.chaddr[3], parsed.chaddr[4], parsed.chaddr[5]);
+            _driver.flush(_socket);
             return;
         }
 
@@ -124,6 +139,7 @@ namespace W5500 {
         if (parsed.xid < _initial_xid || parsed.xid > _xid) {
             _driver.bus().log("XID %u is out of range %u -> %u\n",
                 parsed.xid, _initial_xid, parsed.xid);
+            _driver.flush(_socket);
             return;
         }
 
@@ -136,28 +152,24 @@ namespace W5500 {
         size_t skipped = _driver.read(_socket, nullptr, 206);
         if (skipped != 206) {
             _driver.bus().log("Failed to skip to option bytes\n");
+            _driver.flush(_socket);
             return;
         }
 
+        // Parse the DHCP option data
         uint8_t opt_len = 0;
         uint8_t type = 0;
-
-        uint16_t avail = _driver.get_rx_byte_count(_socket);
-        uint8_t d[avail];
-        _driver.peek(_socket, d, avail);
-        for (uint16_t i = 0; i < avail; i++) {
-            if (i % 16 == 0)
-                printf("\n");
-            printf("%3u ", d[i]);
-        }
-
-        // Update the remaining byte count
+        uint16_t bytes_to_skip;
         while (_driver.get_rx_byte_count(_socket) > 0) {
             DhcpOption opt = DhcpOption(_driver.read(_socket));
             switch (opt) {
                 case DhcpOption::END_OPTIONS:
                     _driver.bus().log("Done parsing options\n");
-                    break;
+                    // Toss the remainder of the packet, if any
+                    bytes_to_skip = packet_end_offset -  _driver.get_rx_read_pointer(_socket);
+                    _driver.read(_socket, nullptr, bytes_to_skip);
+                    _driver.bus().log("Discarding %u bytes\n", bytes_to_skip);
+                    return;
                 case DhcpOption::MESSAGE_TYPE:
                     opt_len = _driver.read(_socket);
                     type = _driver.read(_socket);
@@ -188,17 +200,24 @@ namespace W5500 {
                     // Skip any extra hosts
                     _driver.read(_socket, nullptr, opt_len - 4);
                     break;
+                case DhcpOption::LEASE_TIME:
+                    opt_len = _driver.read(_socket);
+                    uint8_t lease_buf[4];
+                    _driver.read(_socket, lease_buf, 4);
+                    _lease_duration = (
+                        lease_buf[0] << 24 |
+                        lease_buf[1] << 16 |
+                        lease_buf[2] <<  8 |
+                        lease_buf[3]
+                    );
+                    _driver.bus().log("Lease duration: %u\n", _lease_duration);
+                    break;
                 default:
                     // Just skip these
                     opt_len = _driver.read(_socket);
                     _driver.bus().log("Skipping unknown opt %u of len %u\n",
                         opt, opt_len);
-                    for (uint8_t i = 0; i < opt_len; i++)
-                        printf("0x%02x ", _driver.read(_socket));
-                    uint8_t f;
-                    _driver.peek(_socket, &f, 1);
-                    printf("Peek: %u\n", f);
-                    // _driver.read(_socket, nullptr, opt_len);
+                    _driver.read(_socket, nullptr, opt_len);
             }
         }
     }

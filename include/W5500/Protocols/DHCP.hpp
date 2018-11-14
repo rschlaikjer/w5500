@@ -50,6 +50,7 @@ namespace W5500 {
         CLIENT_HOSTNAME = 12,
         DOMAIN_NAME = 15,
         REQUESTED_IP_ADDR = 50,
+        LEASE_TIME = 51,
         MESSAGE_TYPE = 53,
         SERVER_IDENTIFIER = 54,
         PARAM_REQUEST = 55,
@@ -177,6 +178,7 @@ namespace W5500 {
             uint8_t _subnet_mask[4];
             uint8_t _gateway_ip[4];
             uint8_t _dns_server_ip[4];
+            uint32_t _lease_duration = 0;
 
             // State machine
             State _state = State::START;
