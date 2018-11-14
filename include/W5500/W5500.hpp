@@ -99,6 +99,10 @@ namespace W5500 {
             // Read data from the RX buffer, and advance read pointer
             size_t read(uint8_t socket, uint8_t *buffer, size_t size);
 
+            Bus& bus() {
+                return _bus;
+            }
+
         private:
             Bus& _bus;
 
