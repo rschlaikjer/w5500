@@ -14,6 +14,7 @@ namespace W5500 {
     static const uint16_t dhcp_client_port = 68;
 
     static const uint64_t discover_broadcast_interval_ms = 1000;
+    static const uint64_t dhcprequest_timeout_ms = 5000;
     static const uint64_t default_lease_duration_s = 86400;
 
     // Magic cookie for DHCP requests
@@ -189,6 +190,7 @@ namespace W5500 {
             // Timings
             uint64_t _lease_request_start = 0L;
             uint64_t _last_discover_broadcast = 0L;
+            uint64_t _last_dhcprequest_broadcast = 0L;
             uint64_t _renew_deadline = 0L;
             uint64_t _rebind_deadline = 0L;
 

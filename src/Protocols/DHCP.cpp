@@ -41,6 +41,9 @@ namespace W5500 {
     }
 
     void Client::fsm_start() {
+        // Reset all client state
+        reset_current_lease();
+
         // Try and open a UDP socket
         if (_socket == -1) {
             _socket = _driver.open_socket(SocketMode::UDP);
@@ -60,12 +63,12 @@ namespace W5500 {
         // Generate a transaction ID
         _initial_xid = _driver.bus().random();
         _xid = _initial_xid;
+        _driver.bus().log("Starting DHCP client with xid 0x08%x\n", _initial_xid);
 
         // Store the start time
         _lease_request_start = _driver.bus().millis();
 
         // Send a discover packet & move to the DISCOVER state
-        _xid++;
         send_dhcp_packet(DhcpMessageType::DISCOVER);
         _last_discover_broadcast = _driver.bus().millis();
         _state = State::DISCOVER;
@@ -85,11 +88,16 @@ namespace W5500 {
             DhcpMessageType type = parse_dhcp_response();
             if (type == DhcpMessageType::OFFER) {
                 // Log
-                _driver.bus().log("Got DHCPOFFER: %u.%u.%u.%u\n",
-                    _local_ip[0], _local_ip[1], _local_ip[2], _local_ip[3]);
+                _driver.bus().log("Got DHCPOFFER for %u.%u.%u.%u from %u.%u.%u.%u\n",
+                    _local_ip[0], _local_ip[1], _local_ip[2], _local_ip[3],
+                    _dhcp_server_ip[0], _dhcp_server_ip[1], _dhcp_server_ip[2], _dhcp_server_ip[3]);
+
+                // Set the target IP to our DNS server
+                _driver.set_socket_dest_ip_address(_socket, _dhcp_server_ip);
 
                 // If we got an offer, make a request
                 send_dhcp_packet(DhcpMessageType::REQUEST);
+                _last_dhcprequest_broadcast = _driver.bus().millis();
                 _state = State::REQUEST;
                 return;
             }
@@ -110,6 +118,10 @@ namespace W5500 {
 
         // Check if we received data
         if (flags & Registers::Socket::InterruptFlags::RECV) {
+            // Clear data received interrupt flag
+            _driver.clear_socket_iterrupt_flag(
+                _socket, Registers::Socket::InterruptFlags::RECV);
+
             // Try and parse the response
             DhcpMessageType type = parse_dhcp_response();
 
@@ -141,6 +153,9 @@ namespace W5500 {
                 _renew_deadline = _driver.bus().millis() + _timer_t1 * 1000;
                 _rebind_deadline = _driver.bus().millis() + _timer_t2 * 1000;
 
+                // Log msg
+                _driver.bus().log("Bound, renewing in %u seconds\n", _timer_t1);
+
                 // Set the relevant IP params on our driver
                _driver.set_gateway(_gateway_ip);
                _driver.set_subnet_mask(_subnet_mask);
@@ -156,7 +171,12 @@ namespace W5500 {
         }
 
         // Check if we've been waiting too long
-        // TODO
+        if (_driver.bus().millis() - _last_dhcprequest_broadcast >
+                dhcprequest_timeout_ms) {
+            // If we don't get a response to the DHCPREQUEST, reset the FSM
+            // discover phase.
+            _state = State::START;
+        }
     }
 
     void Client::fsm_leased() {
@@ -172,8 +192,13 @@ namespace W5500 {
     }
 
     DhcpMessageType Client::parse_dhcp_response() {
-        // Read UDP header
+        // Check that there's actually data to read
         uint8_t udp_header[8];
+        if (_driver.get_rx_byte_count(_socket) < sizeof(udp_header)) {
+            return DhcpMessageType::ERROR;
+        }
+
+        // Read UDP header
         _driver.read(_socket, udp_header, sizeof(udp_header));
         const uint16_t packet_size = udp_header[6] << 8 | udp_header[7];
 
@@ -258,6 +283,10 @@ namespace W5500 {
                     // Skip any extra hosts
                     _driver.read(_socket, nullptr, opt_len - 4);
                     break;
+                case DhcpOption::SERVER_IDENTIFIER:
+                    opt_len = _driver.read(_socket);
+                    _driver.read(_socket, _dhcp_server_ip, 4);
+                    break;
                 case DhcpOption::LEASE_TIME:
                     opt_len = _driver.read(_socket);
                     uint8_t lease_buf[4];
@@ -275,6 +304,9 @@ namespace W5500 {
                     _driver.read(_socket, nullptr, opt_len);
             }
         }
+
+        // Unexpected - we should be exiting from the END_OPTIONS case
+        _driver.flush(_socket);
         return type;
     }
 
