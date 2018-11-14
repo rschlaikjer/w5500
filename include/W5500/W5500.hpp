@@ -85,12 +85,19 @@ namespace W5500 {
             bool socket_has_interrupt_flag(uint8_t socket, Registers::Socket::InterruptFlags flag);
             void clear_socket_iterrupt_flag(uint8_t socket, Registers::Socket::InterruptFlags flag);
 
+            //// Sending data
             // Trigger a flush of data written to buffer
             void send(uint8_t socket);
             // Write data to buffer and immediately trigger send
             size_t send(uint8_t socket, const uint8_t *buffer, size_t size);
             // Write data to buffer but do NOT automatically trigger send
             size_t write(uint8_t socket, const uint8_t *buffer, size_t size);
+
+            //// Receiving data
+            // Read data from the RX buffer, but do not advance read pointer
+            size_t peek(uint8_t socket, uint8_t *buffer, size_t size);
+            // Read data from the RX buffer, and advance read pointer
+            size_t read(uint8_t socket, uint8_t *buffer, size_t size);
 
         private:
             Bus& _bus;

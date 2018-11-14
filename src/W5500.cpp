@@ -326,10 +326,52 @@ uint16_t W5500::read_register_u8(SocketRegister reg, uint8_t socket) {
     return val;
 }
 
+size_t W5500::peek(uint8_t socket, uint8_t *buffer, size_t size) {
+    // Set up the read transaction
+    uint8_t cmd[3];
+    uint16_t read_offset = _socket_info[socket].read_ptr;
+    cmd[0] = (read_offset >> 8) & 0xFF;
+    cmd[1] = read_offset & 0xFF;
+    cmd[2] = (
+        (SOCKET_TX_BUFFER(socket) << 3) |
+        (0 << 2) | // Read
+        0x0 // Always use VDM mode
+    );
+    _bus.chip_select();
+
+    // Initiate the read
+    _bus.spi_xfer(cmd, nullptr, 3);
+
+    // Read the data
+    _bus.spi_xfer(nullptr, buffer, size);
+
+    // Done
+    _bus.chip_deselect();
+
+    // Return the amount of bytes that were actually sent
+    return size;
+}
+
 uint16_t W5500::read_register_u16(CommonRegister reg) {
     uint8_t buf[2];
     read_register(reg, buf);
     return buf[0] << 8 | buf[1];
+}
+
+size_t W5500::read(uint8_t socket, uint8_t *buffer, size_t size) {
+    // Read the data from the IC
+    size_t read = peek(socket, buffer, size);
+
+    // Increment local read pointer
+    _socket_info[socket].increment_read_pointer(read);
+
+    // Update the socket RX read pointer register
+    write_register_u16(Registers::Socket::RxReadPointer, socket, _socket_info[socket].write_ptr);
+
+    // Call RECV to update the chip state
+    send_socket_command(socket, Registers::Socket::CommandValue::RECV);
+
+    return read;
 }
 
 uint16_t W5500::read_register_u16(SocketRegister reg, uint8_t socket) {
