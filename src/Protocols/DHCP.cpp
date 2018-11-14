@@ -85,6 +85,7 @@ namespace W5500 {
         // If it's been long enough, send another discover
         if (_driver.bus().millis() - _last_discover_broadcast
                 > discover_broadcast_interval_ms) {
+            _xid++;
             send_dhcp_packet(DhcpMessageType::DISCOVER);
             _last_discover_broadcast = _driver.bus().millis();
         }
