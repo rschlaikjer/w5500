@@ -17,6 +17,7 @@ namespace W5500 {
             ~OpenCM3() override {};
 
             void init() override {
+                Bus::init();
                 gpio_mode_setup(_cs_port, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, _cs_pin);
                 chip_deselect();
             };

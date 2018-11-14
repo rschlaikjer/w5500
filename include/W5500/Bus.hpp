@@ -8,11 +8,36 @@ namespace W5500 {
     class W5500;
 
     class Bus {
+
+        const uint64_t taps = 0xD800000000000000;
+        const uint64_t popcnt_taps = __builtin_popcountll(taps);
+
+        protected:
+            uint64_t _lfsr_state = -1;
+
         public:
             virtual ~Bus() = default;
 
             // Optional initializiation step
-            virtual void init() {};
+            virtual void init() {
+                _lfsr_state = millis();
+            };
+
+            // Get the current system time, in milliseconds.
+            virtual uint64_t millis() = 0;
+
+            // Optional logging method.
+            virtual void log(__attribute__((unused)) const char *msg, ...) {}
+
+            // PRNG. Can be overridden if a true RNG is available
+            virtual uint64_t random() {
+                // 64-bit Linear feedback shift register.
+                const uint8_t popcnt_taps_reg = __builtin_popcountll(taps & _lfsr_state);
+                uint64_t tap_xor = (popcnt_taps - popcnt_taps_reg) & 1;
+                _lfsr_state = _lfsr_state >> 1;
+                _lfsr_state |= tap_xor << 63;
+                return _lfsr_state;
+            }
 
             // SPI read/write method. Must be implemented by end user
             virtual void spi_xfer(uint8_t send, uint8_t *recv) = 0;
