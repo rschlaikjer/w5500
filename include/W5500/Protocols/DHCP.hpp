@@ -63,7 +63,12 @@ namespace W5500 {
 
         static const size_t total_size = 34;
 
-#define BRK(X) if (X - _offset >= size) break; [[fallthrough]]
+#if defined(__GNUC__) && __GNUC__ >= 7
+#define FALLTHROUGH [[fallthrough]]
+#else
+#define FALLTHROUGH do {} while (0)
+#endif
+#define BRK(X) if (X - _offset >= size) break; FALLTHROUGH
 
         public:
             size_t consume(uint8_t *data, size_t size) {
