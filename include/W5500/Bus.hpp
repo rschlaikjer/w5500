@@ -68,10 +68,16 @@ namespace W5500 {
                     for (size_t i = 0; i < count; i++) {
                         spi_xfer(send[i], &dummy);
                     }
-                } else {
+                } else if (recv != nullptr) {
                     // Send is null, recv only
                     for (size_t i = 0; i < count; i++) {
                         spi_xfer(0x0, &recv[i]);
+                    }
+                } else {
+                    // Send and recv both null, throw away whatever data
+                    uint8_t dummy;
+                    for (size_t i = 0; i < count; i++) {
+                        spi_xfer(0x0, &dummy);
                     }
                 }
             }
