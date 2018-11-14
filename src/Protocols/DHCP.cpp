@@ -15,12 +15,12 @@ namespace W5500 {
                 fsm_discover();
                 break;
             case State::REQUEST:
+            case State::RENEW:
+                // Request / renew can use same path
+                fsm_request();
                 break;
             case State::LEASED:
-                break;
-            case State::RENEW:
-                break;
-            case State::RELEASE:
+                fsm_leased();
                 break;
         }
     }
@@ -32,6 +32,12 @@ namespace W5500 {
         memset(_subnet_mask, 0, sizeof(_subnet_mask));
         memset(_gateway_ip, 0, sizeof(_gateway_ip));
         memset(_dns_server_ip, 0, sizeof(_dns_server_ip));
+        _lease_duration = 0;
+
+        // Also reset the relevant controller state
+        _driver.set_gateway(_gateway_ip);
+        _driver.set_subnet_mask(_subnet_mask);
+        _driver.set_ip(_local_ip);
     }
 
     void Client::fsm_start() {
@@ -62,6 +68,7 @@ namespace W5500 {
         // Store the start time
         _lease_request_start = _driver.bus().millis();
 
+        // Send a discover packet & move to the DISCOVER state
         _xid++;
         send_dhcp_packet(DhcpMessageType::DISCOVER);
         _last_discover_broadcast = _driver.bus().millis();
@@ -78,8 +85,14 @@ namespace W5500 {
             _driver.clear_socket_iterrupt_flag(
                 _socket, Registers::Socket::InterruptFlags::RECV);
 
-            // Read the pending data
-            parse_dhcp_response();
+            // Parse the response, and see if there's an offer
+            DhcpMessageType type = parse_dhcp_response();
+            if (type == DhcpMessageType::OFFER) {
+                // If we got an offer, make a request
+                send_dhcp_packet(DhcpMessageType::REQUEST);
+                _state = State::REQUEST;
+                return;
+            }
         }
 
         // If it's been long enough, send another discover
@@ -91,7 +104,70 @@ namespace W5500 {
         }
     }
 
-    void Client::parse_dhcp_response() {
+    void Client::fsm_request() {
+        // Get the int flags for this socket
+        auto flags = _driver.get_socket_interrupt_flags(_socket);
+
+        // Check if we received data
+        if (flags & Registers::Socket::InterruptFlags::RECV) {
+            // Try and parse the response
+            DhcpMessageType type = parse_dhcp_response();
+
+            // If it's an ACK, we have a good lease
+            if (type == DhcpMessageType::ACK) {
+                // Move to LEASED state
+                _state = State::LEASED;
+
+                // Set our lease time, if not specified
+                if (_lease_duration == 0) {
+                    _lease_duration = default_lease_duration_s;
+                }
+
+                // Set T1/T2 if not specified
+                // Renew timer
+                if (_timer_t1 == 0) {
+                    _timer_t1 = _lease_duration / 2;
+                }
+                // Rebind timer
+                if (_timer_t2 == 0) {
+                    _timer_t2 = _lease_duration * 0.875;
+                }
+
+                // Set our renew/rebind deadlines
+                _renew_deadline = _driver.bus().millis() + _timer_t1 * 1000;
+                _rebind_deadline = _driver.bus().millis() + _timer_t2 * 1000;
+
+                // Set the relevant IP params on our driver
+               _driver.set_gateway(_gateway_ip);
+               _driver.set_subnet_mask(_subnet_mask);
+               _driver.set_ip(_local_ip);
+
+               // All done
+               return;
+            } else if (type == DhcpMessageType::NAK) {
+                // Go back to start state
+                _state = State::START;
+                return;
+            }
+        }
+
+        // Check if we've been waiting too long
+        // TODO
+    }
+
+    void Client::fsm_leased() {
+        const uint64_t now = _driver.bus().millis();
+        // Check if we're past the rebind deadline
+        if (now > _rebind_deadline) {
+            // Renew failed, try and rebind entirely
+            _state = State::START;
+        } else if (now > _renew_deadline) {
+            // We're past the T1 value for our lease, attempt to renew
+            _state = State::RENEW;
+        }
+    }
+
+    DhcpMessageType Client::parse_dhcp_response() {
         // Get the number of bytes received
         uint16_t bytes_received = _driver.get_rx_byte_count(_socket);
         _driver.bus().log("Received %u bytes DHCP data\n", bytes_received);
@@ -115,13 +191,13 @@ namespace W5500 {
 
         // Parse the fixed header
         ParseContext parsed;
-        size_t consumed = parsed.consume(data, ParseContext::total_size);
+        parsed.consume(data, ParseContext::total_size);
 
         // If the op is not BOOTREPLY, ignore the data.
         if (parsed.op != 2) { // DHCP_BOOTREPLY) {
             _driver.bus().log("Op is %u not BOOTREPLY< ignoring\n");
             _driver.flush(_socket);
-            return;
+            return DhcpMessageType::ERROR;
         }
 
         // If chaddr != our own MAC, ignore
@@ -132,7 +208,7 @@ namespace W5500 {
                 parsed.chaddr[0], parsed.chaddr[1], parsed.chaddr[2],
                 parsed.chaddr[3], parsed.chaddr[4], parsed.chaddr[5]);
             _driver.flush(_socket);
-            return;
+            return DhcpMessageType::ERROR;
         }
 
         // If the transaction ID is out of range, ingore
@@ -140,7 +216,7 @@ namespace W5500 {
             _driver.bus().log("XID %u is out of range %u -> %u\n",
                 parsed.xid, _initial_xid, parsed.xid);
             _driver.flush(_socket);
-            return;
+            return DhcpMessageType::ERROR;
         }
 
         // Copy any offered address to our local IP
@@ -153,12 +229,12 @@ namespace W5500 {
         if (skipped != 206) {
             _driver.bus().log("Failed to skip to option bytes\n");
             _driver.flush(_socket);
-            return;
+            return DhcpMessageType::ERROR;
         }
 
         // Parse the DHCP option data
         uint8_t opt_len = 0;
-        uint8_t type = 0;
+        DhcpMessageType type = DhcpMessageType::ERROR;
         uint16_t bytes_to_skip;
         while (_driver.get_rx_byte_count(_socket) > 0) {
             DhcpOption opt = DhcpOption(_driver.read(_socket));
@@ -169,10 +245,10 @@ namespace W5500 {
                     bytes_to_skip = packet_end_offset -  _driver.get_rx_read_pointer(_socket);
                     _driver.read(_socket, nullptr, bytes_to_skip);
                     _driver.bus().log("Discarding %u bytes\n", bytes_to_skip);
-                    return;
+                    return type;
                 case DhcpOption::MESSAGE_TYPE:
                     opt_len = _driver.read(_socket);
-                    type = _driver.read(_socket);
+                    type = DhcpMessageType(_driver.read(_socket));
                     _driver.bus().log("Message type: %u\n", type);
                     break;
                 case DhcpOption::SUBNET_MASK:
@@ -220,6 +296,7 @@ namespace W5500 {
                     _driver.read(_socket, nullptr, opt_len);
             }
         }
+        return type;
     }
 
     uint16_t Client::seconds_elapsed() {

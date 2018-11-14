@@ -14,6 +14,7 @@ namespace W5500 {
     static const uint16_t dhcp_client_port = 68;
 
     static const uint64_t discover_broadcast_interval_ms = 1000;
+    static const uint64_t default_lease_duration_s = 86400;
 
     // Magic cookie for DHCP requests
     static const uint32_t magic_cookie = 0x63825363;
@@ -23,8 +24,7 @@ namespace W5500 {
         DISCOVER,
         REQUEST,
         LEASED,
-        RENEW,
-        RELEASE
+        RENEW
     };
 
     enum class DhcpOperation : uint8_t {
@@ -40,7 +40,8 @@ namespace W5500 {
         ACK = 5,
         NAK = 6,
         RELEASE = 7,
-        INFORM = 8
+        INFORM = 8,
+        ERROR = 255
     };
 
     enum class DhcpOption : uint8_t {
@@ -179,6 +180,8 @@ namespace W5500 {
             uint8_t _gateway_ip[4];
             uint8_t _dns_server_ip[4];
             uint32_t _lease_duration = 0;
+            uint32_t _timer_t1 = 0;
+            uint32_t _timer_t2 = 0;
 
             // State machine
             State _state = State::START;
@@ -186,6 +189,8 @@ namespace W5500 {
             // Timings
             uint64_t _lease_request_start = 0L;
             uint64_t _last_discover_broadcast = 0L;
+            uint64_t _renew_deadline = 0L;
+            uint64_t _rebind_deadline = 0L;
 
             // Encoding numbers to/from buffers
             void embed_u16(uint8_t *buffer, uint16_t value);
@@ -200,11 +205,13 @@ namespace W5500 {
             void reset_current_lease();
             void request_lease();
 
-            void parse_dhcp_response();
+            DhcpMessageType parse_dhcp_response();
 
             // Finite state machine submethods
             void fsm_start();
             void fsm_discover();
+            void fsm_request();
+            void fsm_leased();
     };
 
 }}} // Namespace
