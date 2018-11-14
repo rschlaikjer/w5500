@@ -358,6 +358,12 @@ uint16_t W5500::read_register_u16(CommonRegister reg) {
     return buf[0] << 8 | buf[1];
 }
 
+uint8_t W5500::read(uint8_t socket) {
+    uint8_t val;
+    read(socket, &val, 1);
+    return val;
+}
+
 size_t W5500::read(uint8_t socket, uint8_t *buffer, size_t size) {
     // Read the data from the IC
     size_t read = peek(socket, buffer, size);
@@ -366,7 +372,7 @@ size_t W5500::read(uint8_t socket, uint8_t *buffer, size_t size) {
     _socket_info[socket].increment_read_pointer(read);
 
     // Update the socket RX read pointer register
-    write_register_u16(Registers::Socket::RxReadPointer, socket, _socket_info[socket].write_ptr);
+    write_register_u16(Registers::Socket::RxReadPointer, socket, _socket_info[socket].read_ptr);
 
     // Call RECV to update the chip state
     send_socket_command(socket, Registers::Socket::CommandValue::RECV);
@@ -382,7 +388,7 @@ size_t W5500::flush(uint8_t socket) {
     _socket_info[socket].increment_read_pointer(rx_bytes);
 
     // Update the socket RX read pointer register
-    write_register_u16(Registers::Socket::RxReadPointer, socket, _socket_info[socket].write_ptr);
+    write_register_u16(Registers::Socket::RxReadPointer, socket, _socket_info[socket].read_ptr);
 
     // Call RECV to update the chip state
     send_socket_command(socket, Registers::Socket::CommandValue::RECV);
