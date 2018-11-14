@@ -63,7 +63,7 @@ namespace W5500 {
         // Generate a transaction ID
         _initial_xid = _driver.bus().random();
         _xid = _initial_xid;
-        _driver.bus().log("Starting DHCP client with xid 0x08%x\n", _initial_xid);
+        _driver.bus().log("Starting DHCP client with xid 0x%08x\n", _initial_xid);
 
         // Store the start time
         _lease_request_start = _driver.bus().millis();
