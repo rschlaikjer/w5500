@@ -14,6 +14,9 @@ namespace W5500 {
     static const size_t max_sockets = 8;
 
     class SocketInfo {
+        public:
+            SocketInfo() {}
+
         protected:
             bool opened = false;
             uint16_t write_ptr = 0;
@@ -29,6 +32,10 @@ namespace W5500 {
             }
 
             friend class W5500;
+        private:
+            // Disallow copying
+            SocketInfo(const SocketInfo&);
+            SocketInfo& operator=(const SocketInfo&);
     };
 
     class W5500 {
