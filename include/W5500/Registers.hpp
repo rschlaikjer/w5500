@@ -17,7 +17,7 @@ namespace W5500 {
     }
 
     constexpr uint8_t SOCKET_RX_BUFFER(uint8_t socket_n) {
-        return socket_n * 4 + 2;
+        return socket_n * 4 + 3;
     }
 
     enum class SocketMode : uint8_t {

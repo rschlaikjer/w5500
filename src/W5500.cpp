@@ -333,7 +333,7 @@ size_t W5500::peek(uint8_t socket, uint8_t *buffer, size_t size) {
     cmd[0] = (read_offset >> 8) & 0xFF;
     cmd[1] = read_offset & 0xFF;
     cmd[2] = (
-        (SOCKET_TX_BUFFER(socket) << 3) |
+        (SOCKET_RX_BUFFER(socket) << 3) |
         (0 << 2) | // Read
         0x0 // Always use VDM mode
     );
