@@ -365,8 +365,16 @@ uint8_t W5500::read(uint8_t socket) {
 }
 
 size_t W5500::read(uint8_t socket, uint8_t *buffer, size_t size) {
-    // Read the data from the IC
-    size_t read = peek(socket, buffer, size);
+    // Check if the receive buffer is valid, if it's null we
+    // want to just skip data
+    size_t read;
+    if (buffer != nullptr) {
+        // Read the data from the IC
+        read = peek(socket, buffer, size);
+    } else {
+        // Don't bother to read, just advance read pointer
+        read = size;
+    }
 
     // Increment local read pointer
     _socket_info[socket].increment_read_pointer(read);
