@@ -58,16 +58,16 @@ namespace W5500 {
             Registers::Common::InterruptRegisterValue get_interrupt_state();
             bool has_interrupt_flag(Registers::Common::InterruptFlags flag);
             void clear_interrupt_flag(Registers::Common::InterruptFlags flag);
-            uint8_t get_socket_interrupt_state();
 
             // Socket connection handling
             int open_socket(SocketMode mode);
             void close_socket(uint8_t sock);
             void set_socket_mode(uint8_t socket, SocketMode mode);
+            void update_socket_offsets(uint8_t socket);
             Registers::Socket::StatusValue get_socket_status(uint8_t socket);
             void send_socket_command(uint8_t socket, Registers::Socket::CommandValue command);
-            void set_socket_dest_ip_address(uint8_t socket, uint8_t target_ip[4]);
-            void set_socket_dest_mac(uint8_t socket, uint8_t mac[6]);
+            void set_socket_dest_ip_address(uint8_t socket, const uint8_t target_ip[4]);
+            void set_socket_dest_mac(uint8_t socket, const uint8_t mac[6]);
             void get_socket_dest_mac(uint8_t socket, uint8_t mac[6]);
             void set_socket_dest_port(uint8_t socket, uint16_t port);
             void set_socket_src_port(uint8_t socket, uint16_t port);
@@ -83,7 +83,7 @@ namespace W5500 {
             // Socket interrupts
             Registers::Socket::InterruptRegisterValue get_socket_interrupt_flags(uint8_t socket);
             bool socket_has_interrupt_flag(uint8_t socket, Registers::Socket::InterruptFlags flag);
-            void clear_socket_iterrupt_flag(uint8_t socket, Registers::Socket::InterruptFlags flag);
+            void clear_socket_interrupt_flag(uint8_t socket, Registers::Socket::InterruptFlags flag);
 
             //// Sending data
             // Trigger a flush of data written to buffer
@@ -112,8 +112,8 @@ namespace W5500 {
             // Local socket info
             SocketInfo _socket_info[max_sockets];
 
-            void write_register(CommonRegister reg, uint8_t *data);
-            void write_register(SocketRegister reg, uint8_t socket_n, uint8_t *data);
+            void write_register(CommonRegister reg, const uint8_t *data);
+            void write_register(SocketRegister reg, uint8_t socket_n, const uint8_t *data);
             void write_register_u8(CommonRegister reg, uint8_t value);
             void write_register_u8(SocketRegister reg, uint8_t socket, uint8_t value);
             void write_register_u16(CommonRegister reg, uint16_t value);

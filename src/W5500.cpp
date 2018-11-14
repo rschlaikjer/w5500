@@ -72,8 +72,16 @@ int W5500::open_socket(SocketMode mode) {
     // Ask the W5500 to actually open the socket
     send_socket_command(sock, Registers::Socket::CommandValue::OPEN);
 
+    // Cache the tx/rx write/read pointers
+    update_socket_offsets(sock);
+
     // Return the socket id
     return sock;
+}
+
+void W5500::update_socket_offsets(uint8_t sock) {
+    _socket_info[sock].write_ptr = get_tx_read_pointer(sock);
+    _socket_info[sock].read_ptr = get_rx_write_pointer(sock);
 }
 
 void W5500::close_socket(uint8_t sock) {
@@ -102,7 +110,7 @@ void W5500::send_socket_command(uint8_t socket, Registers::Socket::CommandValue 
     write_register_u8(Registers::Socket::Command, socket, static_cast<uint8_t>(command));
 }
 
-void W5500::set_socket_dest_ip_address(uint8_t socket, uint8_t target_ip[4]) {
+void W5500::set_socket_dest_ip_address(uint8_t socket, const uint8_t target_ip[4]) {
     write_register(Registers::Socket::DestIPAddress, socket, target_ip);
 }
 
@@ -140,7 +148,7 @@ void W5500::set_force_arp(bool enable) {
     write_register_u8(Registers::Common::Mode, flag);
 }
 
-void W5500::set_socket_dest_mac(uint8_t socket, uint8_t mac[6]) {
+void W5500::set_socket_dest_mac(uint8_t socket, const uint8_t mac[6]) {
     write_register(Registers::Socket::DestHardwareAddress, socket, mac);
 }
 
@@ -148,7 +156,7 @@ void W5500::get_socket_dest_mac(uint8_t socket, uint8_t mac[6]) {
     read_register(Registers::Socket::DestHardwareAddress, socket, mac);
 }
 
-void W5500::write_register(CommonRegister reg, uint8_t *data) {
+void W5500::write_register(CommonRegister reg, const uint8_t *data) {
     const uint8_t cmd_size = 3 + reg.size;
     uint8_t cmd[cmd_size];
     // Set the register offset
@@ -168,7 +176,7 @@ void W5500::write_register(CommonRegister reg, uint8_t *data) {
     _bus.chip_deselect();
 }
 
-void W5500::write_register(SocketRegister reg, uint8_t socket_n, uint8_t *data) {
+void W5500::write_register(SocketRegister reg, uint8_t socket_n, const uint8_t *data) {
     const uint8_t cmd_size = 3 + reg.size;
     uint8_t cmd[cmd_size];
     // Set the register offset
@@ -244,10 +252,6 @@ bool W5500::has_interrupt_flag(Registers::Common::InterruptFlags flag) {
 
 void W5500::clear_interrupt_flag(Registers::Common::InterruptFlags flag) {
     write_register_u8(Registers::Common::Interrupt, static_cast<uint8_t>(flag));
-}
-
-uint8_t W5500::get_socket_interrupt_state() {
-    return read_register_u8(Registers::Common::SocketInterrupt);
 }
 
 uint8_t W5500::get_version() {
@@ -459,7 +463,7 @@ bool W5500::socket_has_interrupt_flag(uint8_t socket, Registers::Socket::Interru
     return get_socket_interrupt_flags(socket) & flag;
 }
 
-void W5500::clear_socket_iterrupt_flag(uint8_t socket, Registers::Socket::InterruptFlags flag) {
+void W5500::clear_socket_interrupt_flag(uint8_t socket, Registers::Socket::InterruptFlags flag) {
     write_register_u8(Registers::Socket::Interrupt, socket, static_cast<uint8_t>(flag));
 }
 

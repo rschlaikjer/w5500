@@ -81,7 +81,7 @@ namespace W5500 {
         // Check if we received data
         if (flags & Registers::Socket::InterruptFlags::RECV) {
             // Clear data received interrupt flag
-            _driver.clear_socket_iterrupt_flag(
+            _driver.clear_socket_interrupt_flag(
                 _socket, Registers::Socket::InterruptFlags::RECV);
 
             // Parse the response, and see if there's an offer
@@ -119,7 +119,7 @@ namespace W5500 {
         // Check if we received data
         if (flags & Registers::Socket::InterruptFlags::RECV) {
             // Clear data received interrupt flag
-            _driver.clear_socket_iterrupt_flag(
+            _driver.clear_socket_interrupt_flag(
                 _socket, Registers::Socket::InterruptFlags::RECV);
 
             // Try and parse the response
