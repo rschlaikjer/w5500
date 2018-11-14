@@ -374,6 +374,23 @@ size_t W5500::read(uint8_t socket, uint8_t *buffer, size_t size) {
     return read;
 }
 
+size_t W5500::flush(uint8_t socket) {
+    // Get the pending data size
+    const uint16_t rx_bytes = get_rx_byte_count(socket);
+
+    // Increment local read pointer by that amount
+    _socket_info[socket].increment_read_pointer(rx_bytes);
+
+    // Update the socket RX read pointer register
+    write_register_u16(Registers::Socket::RxReadPointer, socket, _socket_info[socket].write_ptr);
+
+    // Call RECV to update the chip state
+    send_socket_command(socket, Registers::Socket::CommandValue::RECV);
+
+    // Return the number of discarded bytes
+    return rx_bytes;
+}
+
 uint16_t W5500::read_register_u16(SocketRegister reg, uint8_t socket) {
     uint8_t buf[2];
     read_register(reg, socket, buf);

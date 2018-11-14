@@ -98,6 +98,8 @@ namespace W5500 {
             size_t peek(uint8_t socket, uint8_t *buffer, size_t size);
             // Read data from the RX buffer, and advance read pointer
             size_t read(uint8_t socket, uint8_t *buffer, size_t size);
+            // Clear all pending data on a socket
+            size_t flush(uint8_t socket);
 
             Bus& bus() {
                 return _bus;
