@@ -268,7 +268,7 @@ namespace W5500 {
                 // Socket is in UDP mode
                 UDP = 0x22,
                 // Socket is in MACRAW mode
-                MACEAW = 0x42
+                MACRAW = 0x42
             };
 
             enum class BufferSize : uint8_t {
