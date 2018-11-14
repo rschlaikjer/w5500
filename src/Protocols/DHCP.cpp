@@ -41,8 +41,6 @@ namespace W5500 {
     }
 
     void Client::fsm_start() {
-        _driver.bus().log("Requesting DHCP lease\n");
-
         // Try and open a UDP socket
         if (_socket == -1) {
             _socket = _driver.open_socket(SocketMode::UDP);
@@ -50,7 +48,6 @@ namespace W5500 {
                 _driver.bus().log("Failed to open socket for DHCP client!\n");
                 return;
             }
-            _driver.bus().log("Opened UDP socket %d\n", _socket);
 
             // Configure the socket
             uint8_t broadcast[4] = {255, 255, 255, 255};
@@ -63,7 +60,6 @@ namespace W5500 {
         // Generate a transaction ID
         _initial_xid = _driver.bus().random();
         _xid = _initial_xid;
-        _driver.bus().log("Initial xid: %x\n", _xid);
 
         // Store the start time
         _lease_request_start = _driver.bus().millis();
@@ -88,6 +84,10 @@ namespace W5500 {
             // Parse the response, and see if there's an offer
             DhcpMessageType type = parse_dhcp_response();
             if (type == DhcpMessageType::OFFER) {
+                // Log
+                _driver.bus().log("Got DHCPOFFER: %u.%u.%u.%u\n",
+                    _local_ip[0], _local_ip[1], _local_ip[2], _local_ip[3]);
+
                 // If we got an offer, make a request
                 send_dhcp_packet(DhcpMessageType::REQUEST);
                 _state = State::REQUEST;
@@ -115,6 +115,10 @@ namespace W5500 {
 
             // If it's an ACK, we have a good lease
             if (type == DhcpMessageType::ACK) {
+                // Log
+                _driver.bus().log("Got DHCPACK for %u.%u.%u.%u\n",
+                    _local_ip[0], _local_ip[1], _local_ip[2], _local_ip[3]);
+
                 // Move to LEASED state
                 _state = State::LEASED;
 
@@ -168,18 +172,10 @@ namespace W5500 {
     }
 
     DhcpMessageType Client::parse_dhcp_response() {
-        // Get the number of bytes received
-        uint16_t bytes_received = _driver.get_rx_byte_count(_socket);
-        _driver.bus().log("Received %u bytes DHCP data\n", bytes_received);
-
         // Read UDP header
         uint8_t udp_header[8];
         _driver.read(_socket, udp_header, sizeof(udp_header));
-        const uint16_t source_port = udp_header[4] << 8 | udp_header[5];
         const uint16_t packet_size = udp_header[6] << 8 | udp_header[7];
-        _driver.bus().log("Got UDP packet from %u.%u.%u.%u port %u size %u\n",
-            udp_header[0], udp_header[1], udp_header[2], udp_header[3],
-            source_port, packet_size);
 
         // Calculate the read pointer offset that ends this packet, so we can
         // skip to the end when done
@@ -195,7 +191,7 @@ namespace W5500 {
 
         // If the op is not BOOTREPLY, ignore the data.
         if (parsed.op != 2) { // DHCP_BOOTREPLY) {
-            _driver.bus().log("Op is %u not BOOTREPLY< ignoring\n");
+            _driver.bus().log("Op is %u not BOOTREPLY, ignoring\n");
             _driver.flush(_socket);
             return DhcpMessageType::ERROR;
         }
@@ -220,8 +216,6 @@ namespace W5500 {
         }
 
         // Copy any offered address to our local IP
-        _driver.bus().log("Got DHCPOFFER: %u.%u.%u.%u\n",
-            parsed.yiaddr[0], parsed.yiaddr[1], parsed.yiaddr[2], parsed.yiaddr[3]);
         memcpy(_local_ip, parsed.yiaddr, 4);
 
         // Skip to the option bytes - 206 bytes
@@ -240,39 +234,27 @@ namespace W5500 {
             DhcpOption opt = DhcpOption(_driver.read(_socket));
             switch (opt) {
                 case DhcpOption::END_OPTIONS:
-                    _driver.bus().log("Done parsing options\n");
                     // Toss the remainder of the packet, if any
                     bytes_to_skip = packet_end_offset -  _driver.get_rx_read_pointer(_socket);
                     _driver.read(_socket, nullptr, bytes_to_skip);
-                    _driver.bus().log("Discarding %u bytes\n", bytes_to_skip);
                     return type;
                 case DhcpOption::MESSAGE_TYPE:
                     opt_len = _driver.read(_socket);
                     type = DhcpMessageType(_driver.read(_socket));
-                    _driver.bus().log("Message type: %u\n", type);
                     break;
                 case DhcpOption::SUBNET_MASK:
                     opt_len = _driver.read(_socket);
                     _driver.read(_socket, _subnet_mask, 4);
-                    _driver.bus().log("Subnet mask: %u.%u.%u.%u\n",
-                        _subnet_mask[0], _subnet_mask[1],
-                        _subnet_mask[2], _subnet_mask[3]);
                     break;
                 case DhcpOption::ROUTERS_ON_SUBNET:
                     opt_len = _driver.read(_socket);
                     _driver.read(_socket, _gateway_ip, 4);
-                    _driver.bus().log("Gateway: %u.%u.%u.%u\n",
-                        _gateway_ip[0], _gateway_ip[1],
-                        _gateway_ip[2], _gateway_ip[3]);
                     // Skip any extra routers
                     _driver.read(_socket, nullptr, opt_len - 4);
                     break;
                 case DhcpOption::DNS:
                     opt_len = _driver.read(_socket);
                     _driver.read(_socket, _dns_server_ip, 4);
-                    _driver.bus().log("DNS: %u.%u.%u.%u\n",
-                        _dns_server_ip[0], _dns_server_ip[1],
-                        _dns_server_ip[2], _dns_server_ip[3]);
                     // Skip any extra hosts
                     _driver.read(_socket, nullptr, opt_len - 4);
                     break;
@@ -286,13 +268,10 @@ namespace W5500 {
                         lease_buf[2] <<  8 |
                         lease_buf[3]
                     );
-                    _driver.bus().log("Lease duration: %u\n", _lease_duration);
                     break;
                 default:
-                    // Just skip these
+                    // Skip any unknown options
                     opt_len = _driver.read(_socket);
-                    _driver.bus().log("Skipping unknown opt %u of len %u\n",
-                        opt, opt_len);
                     _driver.read(_socket, nullptr, opt_len);
             }
         }
