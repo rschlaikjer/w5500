@@ -8,6 +8,7 @@
 
 #include <W5500/Bus.hpp>
 #include <W5500/Registers.hpp>
+#include <W5500/Socket.hpp>
 
 namespace W5500 {
 
@@ -32,10 +33,6 @@ namespace W5500 {
             }
 
             friend class W5500;
-        private:
-            // Disallow copying
-            SocketInfo(const SocketInfo&);
-            SocketInfo& operator=(const SocketInfo&);
     };
 
     class W5500 {

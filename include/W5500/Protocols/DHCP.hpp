@@ -155,18 +155,16 @@ namespace W5500 {
 
     class Client {
         public:
-            Client(W5500& driver, const char *hostname)
-                : _driver(driver), _hostname(hostname)
+            Client(W5500& driver, UdpSocket& socket, const char *hostname)
+                : _driver(driver), _socket(socket), _hostname(hostname)
             {};
 
             void update();
 
         private:
             W5500& _driver;
+            UdpSocket& _socket;
             const char *_hostname;
-
-            // Socket on the W5500 to be used for DHCP
-            int _socket = -1;
 
             // Current unique transaction ID
             uint32_t _initial_xid = 0;

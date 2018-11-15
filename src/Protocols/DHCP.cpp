@@ -42,22 +42,24 @@ namespace W5500 {
 
     void Client::fsm_start() {
         // Reset all client state
+        _driver.bus().log("Resetting lease\n");
         reset_current_lease();
 
         // Try and open a UDP socket
-        if (_socket == -1) {
-            _socket = _driver.open_socket(SocketMode::UDP);
-            if (_socket == -1) {
+        if (!_socket.ready()) {
+            _driver.bus().log("Socket not ready, initializing\n");
+            if (!_socket.init()) {
                 _driver.bus().log("Failed to open socket for DHCP client!\n");
                 return;
             }
 
             // Configure the socket
-            uint8_t broadcast[4] = {255, 255, 255, 255};
-            _driver.set_socket_dest_ip_address(_socket, broadcast);
-            _driver.set_socket_dest_port(_socket, dhcp_server_port);
-            _driver.set_socket_src_port(_socket, dhcp_client_port);
-            _driver.send_socket_command(_socket, Registers::Socket::CommandValue::CONNECT);
+            _driver.bus().log("Configuring socket for broadcast\n");
+            _socket.set_dest_ip(255, 255, 255, 255);
+            _socket.set_dest_port(dhcp_server_port);
+            _socket.set_source_port(dhcp_client_port);
+            _socket.connect();
+
         }
 
         // Generate a transaction ID
@@ -76,13 +78,12 @@ namespace W5500 {
 
     void Client::fsm_discover() {
         // Get the int flags for this socket
-        auto flags = _driver.get_socket_interrupt_flags(_socket);
+        auto flags = _socket.get_interrupt_flags();
 
         // Check if we received data
         if (flags & Registers::Socket::InterruptFlags::RECV) {
             // Clear data received interrupt flag
-            _driver.clear_socket_interrupt_flag(
-                _socket, Registers::Socket::InterruptFlags::RECV);
+            _socket.clear_interrupt_flag(Registers::Socket::InterruptFlags::RECV);
 
             // Parse the response, and see if there's an offer
             DhcpMessageType type = parse_dhcp_response();
@@ -93,7 +94,7 @@ namespace W5500 {
                     _dhcp_server_ip[0], _dhcp_server_ip[1], _dhcp_server_ip[2], _dhcp_server_ip[3]);
 
                 // Set the target IP to our DNS server
-                _driver.set_socket_dest_ip_address(_socket, _dhcp_server_ip);
+                _socket.set_dest_ip(_dhcp_server_ip);
 
                 // If we got an offer, make a request
                 send_dhcp_packet(DhcpMessageType::REQUEST);
@@ -114,13 +115,12 @@ namespace W5500 {
 
     void Client::fsm_request() {
         // Get the int flags for this socket
-        auto flags = _driver.get_socket_interrupt_flags(_socket);
+        auto flags = _socket.get_interrupt_flags();
 
         // Check if we received data
         if (flags & Registers::Socket::InterruptFlags::RECV) {
             // Clear data received interrupt flag
-            _driver.clear_socket_interrupt_flag(
-                _socket, Registers::Socket::InterruptFlags::RECV);
+            _socket.clear_interrupt_flag(Registers::Socket::InterruptFlags::RECV);
 
             // Try and parse the response
             DhcpMessageType type = parse_dhcp_response();
@@ -193,22 +193,16 @@ namespace W5500 {
 
     DhcpMessageType Client::parse_dhcp_response() {
         // Check that there's actually data to read
-        uint8_t udp_header[8];
-        if (_driver.get_rx_byte_count(_socket) < sizeof(udp_header)) {
+        uint8_t source_ip[4];
+        uint16_t source_port;
+        const int packet_size = _socket.read_packet_header(source_ip, source_port);
+        if (packet_size < 0) {
             return DhcpMessageType::ERROR;
         }
 
-        // Read UDP header
-        _driver.read(_socket, udp_header, sizeof(udp_header));
-        const uint16_t packet_size = udp_header[6] << 8 | udp_header[7];
-
-        // Calculate the read pointer offset that ends this packet, so we can
-        // skip to the end when done
-        const uint16_t packet_end_offset = _driver.get_rx_read_pointer(_socket) + packet_size;
-
         // Read the fixed-size header
         uint8_t data[ParseContext::total_size];
-        _driver.read(_socket, data, ParseContext::total_size);
+        _socket.read(data, ParseContext::total_size);
 
         // Parse the fixed header
         ParseContext parsed;
@@ -217,7 +211,7 @@ namespace W5500 {
         // If the op is not BOOTREPLY, ignore the data.
         if (parsed.op != 2) { // DHCP_BOOTREPLY) {
             _driver.bus().log("Op is %u not BOOTREPLY, ignoring\n");
-            _driver.flush(_socket);
+            _socket.flush();
             return DhcpMessageType::ERROR;
         }
 
@@ -228,7 +222,7 @@ namespace W5500 {
             _driver.bus().log("Mismatched MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
                 parsed.chaddr[0], parsed.chaddr[1], parsed.chaddr[2],
                 parsed.chaddr[3], parsed.chaddr[4], parsed.chaddr[5]);
-            _driver.flush(_socket);
+            _socket.flush();
             return DhcpMessageType::ERROR;
         }
 
@@ -236,7 +230,7 @@ namespace W5500 {
         if (parsed.xid < _initial_xid || parsed.xid > _xid) {
             _driver.bus().log("XID %u is out of range %u -> %u\n",
                 parsed.xid, _initial_xid, parsed.xid);
-            _driver.flush(_socket);
+            _socket.flush();
             return DhcpMessageType::ERROR;
         }
 
@@ -244,53 +238,51 @@ namespace W5500 {
         memcpy(_local_ip, parsed.yiaddr, 4);
 
         // Skip to the option bytes - 206 bytes
-        size_t skipped = _driver.read(_socket, nullptr, 206);
+        size_t skipped = _socket.read(nullptr, 206);
         if (skipped != 206) {
             _driver.bus().log("Failed to skip to option bytes\n");
-            _driver.flush(_socket);
+            _socket.flush();
             return DhcpMessageType::ERROR;
         }
 
         // Parse the DHCP option data
         uint8_t opt_len = 0;
         DhcpMessageType type = DhcpMessageType::ERROR;
-        uint16_t bytes_to_skip;
-        while (_driver.get_rx_byte_count(_socket) > 0) {
-            DhcpOption opt = DhcpOption(_driver.read(_socket));
+        while (_socket.remaining_bytes_in_packet()) {
+            DhcpOption opt = DhcpOption(_socket.read());
             switch (opt) {
                 case DhcpOption::END_OPTIONS:
                     // Toss the remainder of the packet, if any
-                    bytes_to_skip = packet_end_offset -  _driver.get_rx_read_pointer(_socket);
-                    _driver.read(_socket, nullptr, bytes_to_skip);
+                    _socket.skip_to_packet_end();
                     return type;
                 case DhcpOption::MESSAGE_TYPE:
-                    opt_len = _driver.read(_socket);
-                    type = DhcpMessageType(_driver.read(_socket));
+                    opt_len = _socket.read();
+                    type = DhcpMessageType(_socket.read());
                     break;
                 case DhcpOption::SUBNET_MASK:
-                    opt_len = _driver.read(_socket);
-                    _driver.read(_socket, _subnet_mask, 4);
+                    opt_len = _socket.read();
+                    _socket.read(_subnet_mask, 4);
                     break;
                 case DhcpOption::ROUTERS_ON_SUBNET:
-                    opt_len = _driver.read(_socket);
-                    _driver.read(_socket, _gateway_ip, 4);
+                    opt_len = _socket.read();
+                    _socket.read(_gateway_ip, 4);
                     // Skip any extra routers
-                    _driver.read(_socket, nullptr, opt_len - 4);
+                    _socket.read(nullptr, opt_len - 4);
                     break;
                 case DhcpOption::DNS:
-                    opt_len = _driver.read(_socket);
-                    _driver.read(_socket, _dns_server_ip, 4);
+                    opt_len = _socket.read();
+                    _socket.read(_dns_server_ip, 4);
                     // Skip any extra hosts
-                    _driver.read(_socket, nullptr, opt_len - 4);
+                    _socket.read(nullptr, opt_len - 4);
                     break;
                 case DhcpOption::SERVER_IDENTIFIER:
-                    opt_len = _driver.read(_socket);
-                    _driver.read(_socket, _dhcp_server_ip, 4);
+                    opt_len = _socket.read();
+                    _socket.read(_dhcp_server_ip, 4);
                     break;
                 case DhcpOption::LEASE_TIME:
-                    opt_len = _driver.read(_socket);
+                    opt_len = _socket.read();
                     uint8_t lease_buf[4];
-                    _driver.read(_socket, lease_buf, 4);
+                    _socket.read(lease_buf, 4);
                     _lease_duration = (
                         lease_buf[0] << 24 |
                         lease_buf[1] << 16 |
@@ -300,13 +292,13 @@ namespace W5500 {
                     break;
                 default:
                     // Skip any unknown options
-                    opt_len = _driver.read(_socket);
-                    _driver.read(_socket, nullptr, opt_len);
+                    opt_len = _socket.read();
+                    _socket.read(nullptr, opt_len);
             }
         }
 
         // Unexpected - we should be exiting from the END_OPTIONS case
-        _driver.flush(_socket);
+        _socket.flush();
         return type;
     }
 
@@ -339,21 +331,21 @@ namespace W5500 {
         // ciaddr, yiaddr, siaddr, giaddr are memset 0
 
         // Copy data to W5500
-        _driver.write(_socket, buffer, 28);
+        _socket.write(buffer, 28);
 
         // Re-clear buffer
         memset(buffer, 0x00, sizeof(buffer));
 
         // Set MAC, flush. Total size of CHADDR field is 16.
         _driver.get_mac(buffer);
-        _driver.write(_socket, buffer, 16);
+        _socket.write(buffer, 16);
 
         // Zero mac out again
         memset(buffer, 0x00, 6);
 
         // Write zeros for sname (64b) and file (128b)
         for(int i = 0; i < 6; i++) {
-            _driver.write(_socket, buffer, 32);
+            _socket.write(buffer, 32);
         }
 
         // Set magic cookie
@@ -375,9 +367,9 @@ namespace W5500 {
         uint8_t hostname_len = strlen(_hostname);
         buffer[17] = hostname_len;
         // Write buffer
-        _driver.write(_socket, buffer, 18);
+        _socket.write(buffer, 18);
         // Write the host name
-        _driver.write(_socket, reinterpret_cast<const uint8_t*>(_hostname), hostname_len);
+        _socket.write(reinterpret_cast<const uint8_t*>(_hostname), hostname_len);
 
         // DHCP request message needs to include the requested IP & DHCP server
         if (type == DhcpMessageType::REQUEST) {
@@ -391,7 +383,7 @@ namespace W5500 {
             buffer[7] = 0x04; // IPs are 4 bytes
             memcpy(&buffer[8], _dhcp_server_ip, 4);
 
-            _driver.write(_socket, buffer, 12);
+            _socket.write(buffer, 12);
         }
 
         // Parameter request
@@ -404,10 +396,10 @@ namespace W5500 {
         buffer[6] = static_cast<uint8_t>(DhcpOption::DHCP_T1_VALUE);
         buffer[7] = static_cast<uint8_t>(DhcpOption::DHCP_T2_VALUE);
         buffer[8] = static_cast<uint8_t>(DhcpOption::END_OPTIONS);
-        _driver.write(_socket, buffer, 9);
+        _socket.write(buffer, 9);
 
         // Trigger a send of the buffered command
-        _driver.send(_socket);
+        _socket.send();
     }
 
     void Client::embed_u16(uint8_t *buffer, uint16_t value) {
