@@ -34,7 +34,9 @@ namespace W5500 {
             // Must be called after a TCP conn is opened
             void update_buffer_offsets();
 
+            uint16_t rx_byte_count();
             virtual uint8_t read();
+            virtual int peek(uint8_t *buffer, size_t size);
             virtual int read(uint8_t *buffer, size_t size);
             virtual void flush();
 

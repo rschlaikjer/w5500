@@ -55,6 +55,10 @@ uint8_t Socket::read() {
     return _driver.read(_sockfd);
 }
 
+int Socket::peek(uint8_t *buffer, size_t size) {
+    return _driver.peek(_sockfd, buffer, size);
+}
+
 int Socket::read(uint8_t *buffer, size_t size) {
     return _driver.read(_sockfd, buffer, size);
 }
@@ -77,6 +81,10 @@ void Socket::update_buffer_offsets() {
 
 bool Socket::phy_link_up() {
     return _driver.link_up();
+}
+
+uint16_t Socket::rx_byte_count() {
+    return _driver.get_rx_byte_count(_sockfd);
 }
 
 } // namespace W5500
