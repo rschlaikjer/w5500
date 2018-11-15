@@ -99,6 +99,7 @@ namespace W5500 {
                 // If we got an offer, make a request
                 send_dhcp_packet(DhcpMessageType::REQUEST);
                 _last_dhcprequest_broadcast = _driver.bus().millis();
+                _first_dhcprequest_broadcast = _driver.bus().millis();
                 _state = State::REQUEST;
                 return;
             }
@@ -170,8 +171,15 @@ namespace W5500 {
             }
         }
 
-        // Check if we've been waiting too long
+        // Check if we should re-request
         if (_driver.bus().millis() - _last_dhcprequest_broadcast >
+                dhcprequest_retry_ms) {
+            send_dhcp_packet(DhcpMessageType::REQUEST);
+            _last_dhcprequest_broadcast = _driver.bus().millis();
+        }
+
+        // Check if we've been waiting too long
+        if (_driver.bus().millis() - _first_dhcprequest_broadcast >
                 dhcprequest_timeout_ms) {
             // If we don't get a response to the DHCPREQUEST, reset the FSM
             // discover phase.
