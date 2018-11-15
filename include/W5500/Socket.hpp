@@ -51,8 +51,8 @@ namespace W5500 {
         public:
             using Socket::Socket;
 
-            bool init();
-            bool ready();
+            bool init() override;
+            bool ready() override;
 
             bool has_packet();
             int peek_packet(uint8_t source_ip[4], uint16_t& source_port);
@@ -72,6 +72,10 @@ namespace W5500 {
     class TcpSocket : public Socket {
         public:
             using Socket::Socket;
+
+            bool init() override;
+            bool ready() override;
+            bool connected();
     };
 
 }
