@@ -19,27 +19,34 @@ namespace W5500 {
 
             virtual bool init() = 0;
             virtual bool ready() = 0;
+            bool phy_link_up();
 
             void set_dest_ip(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
-            void set_dest_ip(uint8_t ip[4]);
+            void set_dest_ip(const uint8_t ip[4]);
             void set_dest_port(uint16_t port);
             void set_source_port(uint16_t port);
 
-            void connect();
+            void close();
 
             Registers::Socket::InterruptRegisterValue get_interrupt_flags();
             void clear_interrupt_flag(Registers::Socket::InterruptFlags val);
+
+            // Must be called after a TCP conn is opened
+            void update_buffer_offsets();
 
             virtual uint8_t read();
             virtual int read(uint8_t *buffer, size_t size);
             virtual void flush();
 
-            void write(const uint8_t *buffer, size_t size);
+            int write(const uint8_t *buffer, size_t size);
+            int send(const uint8_t *buffer, size_t size);
             void send();
 
         protected:
             W5500& _driver;
             const uint8_t _sockfd;
+
+            void connect();
 
         private:
             // Disallow copying of sockets
@@ -73,9 +80,14 @@ namespace W5500 {
         public:
             using Socket::Socket;
 
+            uint16_t _ephemeral_port = 1;
+
             bool init() override;
             bool ready() override;
+            bool connecting();
             bool connected();
+
+            void connect(const uint8_t ip[4], uint16_t port);
     };
 
 }

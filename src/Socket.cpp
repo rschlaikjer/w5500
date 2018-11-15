@@ -14,7 +14,7 @@ void Socket::set_dest_ip(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
     set_dest_ip(ip);
 }
 
-void Socket::set_dest_ip(uint8_t ip[4]) {
+void Socket::set_dest_ip(const uint8_t ip[4]) {
     _driver.set_socket_dest_ip_address(_sockfd, ip);
 }
 
@@ -29,6 +29,12 @@ void Socket::set_source_port(uint16_t port) {
 void Socket::connect() {
     _driver.send_socket_command(
         _sockfd, Registers::Socket::CommandValue::CONNECT
+    );
+}
+
+void Socket::close() {
+    _driver.send_socket_command(
+        _sockfd, Registers::Socket::CommandValue::CLOSE
     );
 }
 
@@ -53,12 +59,24 @@ int Socket::read(uint8_t *buffer, size_t size) {
     return _driver.read(_sockfd, buffer, size);
 }
 
-void Socket::write(const uint8_t *buffer, size_t size) {
-    _driver.write(_sockfd, buffer, size);
+int Socket::write(const uint8_t *buffer, size_t size) {
+    return _driver.write(_sockfd, buffer, size);
+}
+
+int Socket::send(const uint8_t *buffer, size_t size) {
+    return _driver.send(_sockfd, buffer, size);
 }
 
 void Socket::send() {
     _driver.send(_sockfd);
+}
+
+void Socket::update_buffer_offsets() {
+    _driver.update_socket_offsets(_sockfd);
+}
+
+bool Socket::phy_link_up() {
+    return _driver.link_up();
 }
 
 } // namespace W5500

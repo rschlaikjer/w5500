@@ -19,8 +19,19 @@ bool TcpSocket::ready() {
         || status == Registers::Socket::StatusValue::ESTABLISHED; // Client connected
 }
 
+bool TcpSocket::connecting() {
+    return _driver.get_socket_status(_sockfd) == Registers::Socket::StatusValue::SYN_SENT;
+}
+
 bool TcpSocket::connected() {
     return _driver.get_socket_status(_sockfd) == Registers::Socket::StatusValue::ESTABLISHED;
+}
+
+void TcpSocket::connect(const uint8_t ip[4], uint16_t port) {
+    set_dest_ip(ip);
+    set_dest_port(port);
+    set_source_port(_ephemeral_port++);
+    Socket::connect();
 }
 
 } // namespace W5500

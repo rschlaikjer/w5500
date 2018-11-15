@@ -58,8 +58,6 @@ namespace W5500 {
             _socket.set_dest_ip(255, 255, 255, 255);
             _socket.set_dest_port(dhcp_server_port);
             _socket.set_source_port(dhcp_client_port);
-            _socket.connect();
-
         }
 
         // Generate a transaction ID
