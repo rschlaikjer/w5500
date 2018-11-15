@@ -67,6 +67,9 @@ namespace W5500 {
             int open_socket(SocketMode mode);
             void close_socket(uint8_t sock);
             void set_socket_mode(uint8_t socket, SocketMode mode);
+            void set_socket_buffer_size(uint8_t socket, Registers::Socket::BufferSize size);
+            void set_socket_tx_buffer_size(uint8_t socket, Registers::Socket::BufferSize size);
+            void set_socket_rx_buffer_size(uint8_t socket, Registers::Socket::BufferSize size);
             void update_socket_offsets(uint8_t socket);
             Registers::Socket::StatusValue get_socket_status(uint8_t socket);
             void send_socket_command(uint8_t socket, Registers::Socket::CommandValue command);

@@ -156,6 +156,19 @@ void W5500::get_socket_dest_mac(uint8_t socket, uint8_t mac[6]) {
     read_register(Registers::Socket::DestHardwareAddress, socket, mac);
 }
 
+void W5500::set_socket_buffer_size(uint8_t socket, Registers::Socket::BufferSize size) {
+    set_socket_tx_buffer_size(socket, size);
+    set_socket_rx_buffer_size(socket, size);
+}
+
+void W5500::set_socket_tx_buffer_size(uint8_t socket, Registers::Socket::BufferSize size) {
+    write_register_u8(Registers::Socket::TxBufferSize, socket, static_cast<uint8_t>(size));
+}
+
+void W5500::set_socket_rx_buffer_size(uint8_t socket, Registers::Socket::BufferSize size) {
+    write_register_u8(Registers::Socket::RxBufferSize, socket, static_cast<uint8_t>(size));
+}
+
 void W5500::write_register(CommonRegister reg, const uint8_t *data) {
     const uint8_t cmd_size = 3 + reg.size;
     uint8_t cmd[cmd_size];
