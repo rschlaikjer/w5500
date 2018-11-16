@@ -31,9 +31,6 @@ namespace W5500 {
             Registers::Socket::InterruptRegisterValue get_interrupt_flags();
             void clear_interrupt_flag(Registers::Socket::InterruptFlags val);
 
-            // Must be called after a TCP conn is opened
-            void update_buffer_offsets();
-
             uint16_t rx_byte_count();
             virtual uint8_t read();
             virtual int peek(uint8_t *buffer, size_t size);
@@ -54,6 +51,9 @@ namespace W5500 {
             // Disallow copying of sockets
             Socket(const Socket&);
             Socket& operator=(const Socket&);
+
+            // Offset for tracking writes without matching send
+            uint16_t _write_offset = 0;
     };
 
     class UdpSocket : public Socket {

@@ -64,19 +64,23 @@ int Socket::read(uint8_t *buffer, size_t size) {
 }
 
 int Socket::write(const uint8_t *buffer, size_t size) {
-    return _driver.write(_sockfd, buffer, size);
+    const int ret = _driver.write(_sockfd, buffer, _write_offset, size);
+    _write_offset += ret;
+    return ret;
 }
 
 int Socket::send(const uint8_t *buffer, size_t size) {
-    return _driver.send(_sockfd, buffer, size);
+    const int ret = _driver.send(_sockfd, buffer, _write_offset, size);
+    _write_offset = 0;
+    return ret;
 }
 
 void Socket::send() {
+    if (_write_offset == 0) {
+        return;
+    }
     _driver.send(_sockfd);
-}
-
-void Socket::update_buffer_offsets() {
-    _driver.update_socket_offsets(_sockfd);
+    _write_offset = 0;
 }
 
 bool Socket::phy_link_up() {

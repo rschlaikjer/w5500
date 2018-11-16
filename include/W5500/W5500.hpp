@@ -14,27 +14,6 @@ namespace W5500 {
 
     static const size_t max_sockets = 8;
 
-    class SocketInfo {
-        public:
-            SocketInfo() {}
-
-        protected:
-            bool opened = false;
-            uint16_t write_ptr = 0;
-            uint16_t read_ptr = 0;
-            Registers::Socket::BufferSize tx_buffer_size = Registers::Socket::BufferSize::SZ_2K;
-
-            void increment_write_pointer(uint16_t amount) {
-                write_ptr += amount;
-            }
-
-            void increment_read_pointer(uint16_t amount) {
-                read_ptr += amount;
-            }
-
-            friend class W5500;
-    };
-
     class W5500 {
         public:
             W5500(Bus& bus) : _bus(bus) {}
@@ -64,13 +43,12 @@ namespace W5500 {
             void clear_interrupt_flag(Registers::Common::InterruptFlags flag);
 
             // Socket connection handling
-            int open_socket(SocketMode mode);
-            void close_socket(uint8_t sock);
             void set_socket_mode(uint8_t socket, SocketMode mode);
             void set_socket_buffer_size(uint8_t socket, Registers::Socket::BufferSize size);
+            Registers::Socket::BufferSize get_socket_tx_buffer_size(uint8_t socket);
+            Registers::Socket::BufferSize get_socket_rx_buffer_size(uint8_t socket);
             void set_socket_tx_buffer_size(uint8_t socket, Registers::Socket::BufferSize size);
             void set_socket_rx_buffer_size(uint8_t socket, Registers::Socket::BufferSize size);
-            void update_socket_offsets(uint8_t socket);
             Registers::Socket::StatusValue get_socket_status(uint8_t socket);
             void send_socket_command(uint8_t socket, Registers::Socket::CommandValue command);
             void set_socket_dest_ip_address(uint8_t socket, const uint8_t target_ip[4]);
@@ -83,8 +61,10 @@ namespace W5500 {
             uint16_t get_tx_free_size(uint8_t socket);
             uint16_t get_tx_read_pointer(uint8_t socket);
             uint16_t get_tx_write_pointer(uint8_t socket);
+            void set_tx_write_pointer(uint8_t socket, uint16_t offset);
             uint16_t get_rx_byte_count(uint8_t socket);
             uint16_t get_rx_read_pointer(uint8_t socket);
+            void set_rx_read_pointer(uint8_t socket, uint16_t offset);
             uint16_t get_rx_write_pointer(uint8_t socket);
 
             // Socket interrupts
@@ -96,9 +76,9 @@ namespace W5500 {
             // Trigger a flush of data written to buffer
             void send(uint8_t socket);
             // Write data to buffer and immediately trigger send
-            size_t send(uint8_t socket, const uint8_t *buffer, size_t size);
+            size_t send(uint8_t socket, const uint8_t *buffer, size_t offset, size_t size);
             // Write data to buffer but do NOT automatically trigger send
-            size_t write(uint8_t socket, const uint8_t *buffer, size_t size);
+            size_t write(uint8_t socket, const uint8_t *buffer, size_t offset, size_t size);
 
             //// Receiving data
             // Read data from the RX buffer, but do not advance read pointer
@@ -115,9 +95,6 @@ namespace W5500 {
 
         private:
             Bus& _bus;
-
-            // Local socket info
-            SocketInfo _socket_info[max_sockets];
 
             void write_register(CommonRegister reg, const uint8_t *data);
             void write_register(SocketRegister reg, uint8_t socket_n, const uint8_t *data);
