@@ -74,10 +74,15 @@ void W5500::reset() {
     uint8_t flag = static_cast<uint8_t>(Registers::Common::ModeFlags::RESET);
     write_register(Registers::Common::Mode, &flag);
 
-    // Wait for reset to complete
+    // Wait for core reset to complete
     do {
         read_register(Registers::Common::Mode, &flag);
     } while (flag & static_cast<uint8_t>(Registers::Common::ModeFlags::RESET));
+
+    // Wait for PHY reset to complete
+    do {
+        read_register(Registers::Common::PhyConfig, &flag);
+    } while (!(flag & static_cast<uint8_t>(Registers::Common::PhyConfigFlags::RESET)));
 }
 
 void W5500::set_force_arp(bool enable) {
