@@ -33,7 +33,9 @@ namespace W5500 {
             void set_ip(uint8_t ip[4]);
             void get_ip(uint8_t ip[4]);
 
+            // PHY status
             bool link_up();
+            void set_phy_mode(Registers::Common::PhyOperationMode mode);
 
             // General interrupts
             void set_interrupt_mask(

@@ -435,4 +435,17 @@ void W5500::clear_socket_interrupt_flag(uint8_t socket, Registers::Socket::Inter
     write_register_u8(Registers::Socket::Interrupt, socket, static_cast<uint8_t>(flag));
 }
 
+void W5500::set_phy_mode(Registers::Common::PhyOperationMode mode) {
+    const uint8_t current_phy_settings = read_register_u8(Registers::Common::PhyConfig);
+    const uint8_t new_phy_settings = (
+        // Clear the old mask from the phy register
+        (current_phy_settings & ~(0b111 << 3)) |
+        // Set the operation mode bit to use software control instead of HW pins
+        static_cast<uint8_t>(Registers::Common::PhyConfigFlags::OPERATION_MODE) |
+        // Set the new mode mask
+        (static_cast<uint8_t>(mode) << 3)
+    );
+    write_register_u8(Registers::Common::PhyConfig, new_phy_settings);
+}
+
 } // namespace W5500

@@ -115,6 +115,16 @@ namespace W5500 {
                 MAGIC_PACKET = (1 << 4)
             };
 
+            enum class PhyOperationMode : uint8_t {
+                BASE10_HALF_DUPLEX = 0b000,
+                BASE10_FULL_DUPLEX = 0b001,
+                BASE100_HALF_DUPLEX = 0b010,
+                BASE100_FULL_DUPLEX = 0b011,
+                BASE100_HALF_DUPLEX_AUTONEGOTIATE = 0b100,
+                POWER_DOWN = 0b110,
+                AUTO_ALL = 0b111
+            };
+
             enum class PhyConfigFlags : uint8_t {
                 // When 0 written, PHY is reset. After reset will be 1.
                 RESET = (1 << 7),

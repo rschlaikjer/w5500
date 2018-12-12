@@ -1,7 +1,5 @@
 #include <W5500/Protocols/DHCP.hpp>
 
-#include <stdio.h>
-
 namespace W5500 {
     namespace Protocols {
         namespace DHCP {
