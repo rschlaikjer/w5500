@@ -436,7 +436,7 @@ void W5500::clear_socket_interrupt_flag(uint8_t socket, Registers::Socket::Inter
 }
 
 void W5500::set_phy_mode(Registers::Common::PhyOperationMode mode) {
-    const uint8_t current_phy_settings = read_register_u8(Registers::Common::PhyConfig);
+    uint8_t current_phy_settings = read_register_u8(Registers::Common::PhyConfig);
     const uint8_t new_phy_settings = (
         // Clear the old mask from the phy register
         (current_phy_settings & ~(0b111 << 3)) |
@@ -445,6 +445,16 @@ void W5500::set_phy_mode(Registers::Common::PhyOperationMode mode) {
         // Set the new mode mask
         (static_cast<uint8_t>(mode) << 3)
     );
+    write_register_u8(Registers::Common::PhyConfig, new_phy_settings);
+
+    // After changing the PHY settings, we need to reset the PHY by
+    // clearing the RESET bit
+    current_phy_settings = read_register_u8(Registers::Common::PhyConfig);
+    write_register_u8(Registers::Common::PhyConfig, new_phy_settings & ~(
+                static_cast<uint8_t>(Registers::Common::PhyConfigFlags::RESET)));
+
+    // And then setting the reset bit again
+    current_phy_settings = read_register_u8(Registers::Common::PhyConfig);
     write_register_u8(Registers::Common::PhyConfig, new_phy_settings);
 }
 
