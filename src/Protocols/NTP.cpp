@@ -50,6 +50,10 @@ namespace W5500 {
         return parsed_valid_packet;
     }
 
+    void Client::set_server_ip(uint8_t ip[4]) {
+        set_server_ip(ip[0], ip[1], ip[2], ip[3]);
+    }
+
     void Client::set_server_ip(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
         _ip[0] = a;
         _ip[1] = b;

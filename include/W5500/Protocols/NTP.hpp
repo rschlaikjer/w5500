@@ -76,6 +76,7 @@ namespace W5500 {
             }
 
             bool update(uint64_t *current_time);
+            void set_server_ip(uint8_t ip[4]);
             void set_server_ip(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
 
         private:
