@@ -6,6 +6,8 @@
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/spi.h>
 
+#include <W5500/Bus.hpp>
+
 namespace W5500 {
     namespace Buses {
 
