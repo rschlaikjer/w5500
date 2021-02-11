@@ -12,19 +12,25 @@ bool TcpSocket::init() {
 bool TcpSocket::ready() {
     Registers::Socket::StatusValue status = _driver.get_socket_status(_sockfd);
     // Return true if the socket is open, connecting or connected.
-    return status == Registers::Socket::StatusValue::INIT // Opened
-        || status == Registers::Socket::StatusValue::LISTEN // Server mode
-        || status == Registers::Socket::StatusValue::SYN_SENT // Client conn in progress
-        || status == Registers::Socket::StatusValue::SYN_RECV // Server conn in progress
-        || status == Registers::Socket::StatusValue::ESTABLISHED; // Client connected
+    return status == Registers::Socket::StatusValue::INIT        // Opened
+           || status == Registers::Socket::StatusValue::LISTEN   // Server mode
+           || status == Registers::Socket::StatusValue::SYN_SENT // Client conn
+                                                                 // in progress
+           || status == Registers::Socket::StatusValue::SYN_RECV // Server conn
+                                                                 // in progress
+           ||
+           status ==
+               Registers::Socket::StatusValue::ESTABLISHED; // Client connected
 }
 
 bool TcpSocket::connecting() {
-    return _driver.get_socket_status(_sockfd) == Registers::Socket::StatusValue::SYN_SENT;
+    return _driver.get_socket_status(_sockfd) ==
+           Registers::Socket::StatusValue::SYN_SENT;
 }
 
 bool TcpSocket::connected() {
-    return _driver.get_socket_status(_sockfd) == Registers::Socket::StatusValue::ESTABLISHED;
+    return _driver.get_socket_status(_sockfd) ==
+           Registers::Socket::StatusValue::ESTABLISHED;
 }
 
 void TcpSocket::connect(const uint8_t ip[4], uint16_t port) {

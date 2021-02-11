@@ -1,8 +1,8 @@
 #include <W5500/Utility/CRC16.hpp>
 
 namespace W5500 {
-    namespace Utility {
-        namespace CRC16 {
+namespace Utility {
+namespace CRC16 {
 
 uint16_t update(uint16_t crc, uint8_t data) {
     return (crc << 8) ^ table[((crc >> 8) ^ data) & 0x00FF];
@@ -16,4 +16,6 @@ uint16_t of(const uint8_t *data, size_t len) {
     return crc;
 }
 
-}}} // Namespace
+} // namespace CRC16
+} // namespace Utility
+} // namespace W5500

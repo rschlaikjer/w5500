@@ -27,15 +27,13 @@ void Socket::set_source_port(uint16_t port) {
 }
 
 void Socket::connect() {
-    _driver.send_socket_command(
-        _sockfd, Registers::Socket::CommandValue::CONNECT
-    );
+    _driver.send_socket_command(_sockfd,
+                                Registers::Socket::CommandValue::CONNECT);
 }
 
 void Socket::close() {
-    _driver.send_socket_command(
-        _sockfd, Registers::Socket::CommandValue::CLOSE
-    );
+    _driver.send_socket_command(_sockfd,
+                                Registers::Socket::CommandValue::CLOSE);
 }
 
 Registers::Socket::InterruptRegisterValue Socket::get_interrupt_flags() {
@@ -46,14 +44,9 @@ void Socket::clear_interrupt_flag(Registers::Socket::InterruptFlags val) {
     return _driver.clear_socket_interrupt_flag(_sockfd, val);
 }
 
-void Socket::flush() {
-    _driver.flush(_sockfd);
-}
+void Socket::flush() { _driver.flush(_sockfd); }
 
-
-uint8_t Socket::read() {
-    return _driver.read(_sockfd);
-}
+uint8_t Socket::read() { return _driver.read(_sockfd); }
 
 int Socket::peek(uint8_t *buffer, size_t size) {
     return _driver.peek(_sockfd, buffer, size);
@@ -83,12 +76,8 @@ void Socket::send() {
     _write_offset = 0;
 }
 
-bool Socket::phy_link_up() {
-    return _driver.link_up();
-}
+bool Socket::phy_link_up() { return _driver.link_up(); }
 
-uint16_t Socket::rx_byte_count() {
-    return _driver.get_rx_byte_count(_sockfd);
-}
+uint16_t Socket::rx_byte_count() { return _driver.get_rx_byte_count(_sockfd); }
 
 } // namespace W5500

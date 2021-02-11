@@ -8,90 +8,89 @@
 
 namespace W5500 {
 
-    // Forward-declare driver class
-    class W5500;
+// Forward-declare driver class
+class W5500;
 
-    class Socket {
-        public:
-            Socket(W5500& driver, uint8_t sockfd) :
-                _driver(driver), _sockfd(sockfd) {}
-            virtual ~Socket() {}
+class Socket {
+  public:
+    Socket(W5500 &driver, uint8_t sockfd) : _driver(driver), _sockfd(sockfd) {}
+    virtual ~Socket() {}
 
-            virtual bool init() = 0;
-            virtual bool ready() = 0;
-            bool phy_link_up();
+    virtual bool init() = 0;
+    virtual bool ready() = 0;
+    bool phy_link_up();
 
-            void set_dest_ip(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
-            void set_dest_ip(const uint8_t ip[4]);
-            void set_dest_port(uint16_t port);
-            void set_source_port(uint16_t port);
+    void set_dest_ip(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
+    void set_dest_ip(const uint8_t ip[4]);
+    void set_dest_port(uint16_t port);
+    void set_source_port(uint16_t port);
 
-            void close();
+    void close();
 
-            Registers::Socket::InterruptRegisterValue get_interrupt_flags();
-            void clear_interrupt_flag(Registers::Socket::InterruptFlags val);
+    Registers::Socket::InterruptRegisterValue get_interrupt_flags();
+    void clear_interrupt_flag(Registers::Socket::InterruptFlags val);
 
-            uint16_t rx_byte_count();
-            virtual uint8_t read();
-            virtual int peek(uint8_t *buffer, size_t size);
-            virtual int read(uint8_t *buffer, size_t size);
-            virtual void flush();
+    uint16_t rx_byte_count();
+    virtual uint8_t read();
+    virtual int peek(uint8_t *buffer, size_t size);
+    virtual int read(uint8_t *buffer, size_t size);
+    virtual void flush();
 
-            int write(const uint8_t *buffer, size_t size);
-            int send(const uint8_t *buffer, size_t size);
-            void send();
+    int write(const uint8_t *buffer, size_t size);
+    int send(const uint8_t *buffer, size_t size);
+    void send();
 
-        protected:
-            W5500& _driver;
-            const uint8_t _sockfd;
+  protected:
+    W5500 &_driver;
+    const uint8_t _sockfd;
 
-            void connect();
+    void connect();
 
-        private:
-            // Disallow copying of sockets
-            Socket(const Socket&);
-            Socket& operator=(const Socket&);
+  private:
+    // Disallow copying of sockets
+    Socket(const Socket &);
+    Socket &operator=(const Socket &);
 
-            // Offset for tracking writes without matching send
-            uint16_t _write_offset = 0;
-    };
+    // Offset for tracking writes without matching send
+    uint16_t _write_offset = 0;
+};
 
-    class UdpSocket : public Socket {
-        public:
-            using Socket::Socket;
+class UdpSocket : public Socket {
+  public:
+    using Socket::Socket;
 
-            bool init() override;
-            bool ready() override;
+    bool init() override;
+    bool ready() override;
 
-            bool has_packet();
-            int peek_packet(uint8_t source_ip[4], uint16_t& source_port);
-            int read_packet_header(uint8_t source_ip[4], uint16_t& source_port);
+    bool has_packet();
+    int peek_packet(uint8_t source_ip[4], uint16_t &source_port);
+    int read_packet_header(uint8_t source_ip[4], uint16_t &source_port);
 
-            uint8_t read() override;
-            int read(uint8_t *buffer, size_t size) override;
-            void flush() override;
+    uint8_t read() override;
+    int read(uint8_t *buffer, size_t size) override;
+    void flush() override;
 
-            int remaining_bytes_in_packet();
-            void skip_to_packet_end();
+    int remaining_bytes_in_packet();
+    void skip_to_packet_end();
 
-        private:
-            int _packet_bytes_remaining = 0;
-    };
+  private:
+    int _packet_bytes_remaining = 0;
+};
 
-    class TcpSocket : public Socket {
-        public:
-            using Socket::Socket;
+class TcpSocket : public Socket {
+  public:
+    using Socket::Socket;
 
-            uint16_t _ephemeral_port = 1;
+    uint16_t _ephemeral_port = 1;
 
-            bool init() override;
-            bool ready() override;
-            bool connecting();
-            bool connected();
+    bool init() override;
+    bool ready() override;
+    bool connecting();
+    bool connected();
 
-            void connect(const uint8_t ip[4], uint16_t port);
-    };
+    void connect(const uint8_t ip[4], uint16_t port);
+};
 
-}
+} // namespace W5500
 
 #endif // #ifndef _W5500__W5500_SOCKET_H_

@@ -2,9 +2,7 @@
 
 namespace W5500 {
 
-void W5500::init() {
-    _bus.init();
-}
+void W5500::init() { _bus.init(); }
 
 void W5500::set_mac(uint8_t mac[6]) {
     write_register(Registers::Common::SourceHardwareAddress, mac);
@@ -41,7 +39,8 @@ void W5500::get_ip(uint8_t ip[4]) {
 bool W5500::link_up() {
     uint8_t val;
     read_register(Registers::Common::PhyConfig, &val);
-    return val & static_cast<uint8_t>(Registers::Common::PhyConfigFlags::LINK_STATUS);
+    return val &
+           static_cast<uint8_t>(Registers::Common::PhyConfigFlags::LINK_STATUS);
 }
 
 Registers::Socket::StatusValue W5500::get_socket_status(uint8_t socket) {
@@ -50,14 +49,18 @@ Registers::Socket::StatusValue W5500::get_socket_status(uint8_t socket) {
 }
 
 void W5500::set_socket_mode(uint8_t socket, SocketMode mode) {
-    write_register_u8(Registers::Socket::Mode, socket, static_cast<uint8_t>(mode));
+    write_register_u8(Registers::Socket::Mode, socket,
+                      static_cast<uint8_t>(mode));
 }
 
-void W5500::send_socket_command(uint8_t socket, Registers::Socket::CommandValue command) {
-    write_register_u8(Registers::Socket::Command, socket, static_cast<uint8_t>(command));
+void W5500::send_socket_command(uint8_t socket,
+                                Registers::Socket::CommandValue command) {
+    write_register_u8(Registers::Socket::Command, socket,
+                      static_cast<uint8_t>(command));
 }
 
-void W5500::set_socket_dest_ip_address(uint8_t socket, const uint8_t target_ip[4]) {
+void W5500::set_socket_dest_ip_address(uint8_t socket,
+                                       const uint8_t target_ip[4]) {
     write_register(Registers::Socket::DestIPAddress, socket, target_ip);
 }
 
@@ -82,7 +85,8 @@ void W5500::reset() {
     // Wait for PHY reset to complete
     do {
         read_register(Registers::Common::PhyConfig, &flag);
-    } while (!(flag & static_cast<uint8_t>(Registers::Common::PhyConfigFlags::RESET)));
+    } while (!(flag &
+               static_cast<uint8_t>(Registers::Common::PhyConfigFlags::RESET)));
 }
 
 void W5500::set_force_arp(bool enable) {
@@ -108,25 +112,32 @@ void W5500::get_socket_dest_mac(uint8_t socket, uint8_t mac[6]) {
     read_register(Registers::Socket::DestHardwareAddress, socket, mac);
 }
 
-void W5500::set_socket_buffer_size(uint8_t socket, Registers::Socket::BufferSize size) {
+void W5500::set_socket_buffer_size(uint8_t socket,
+                                   Registers::Socket::BufferSize size) {
     set_socket_tx_buffer_size(socket, size);
     set_socket_rx_buffer_size(socket, size);
 }
 
 Registers::Socket::BufferSize W5500::get_socket_tx_buffer_size(uint8_t socket) {
-    return Registers::Socket::BufferSize(read_register_u8(Registers::Socket::TxBufferSize, socket));
+    return Registers::Socket::BufferSize(
+        read_register_u8(Registers::Socket::TxBufferSize, socket));
 }
 
 Registers::Socket::BufferSize W5500::get_socket_rx_buffer_size(uint8_t socket) {
-    return Registers::Socket::BufferSize(read_register_u8(Registers::Socket::RxBufferSize, socket));
+    return Registers::Socket::BufferSize(
+        read_register_u8(Registers::Socket::RxBufferSize, socket));
 }
 
-void W5500::set_socket_tx_buffer_size(uint8_t socket, Registers::Socket::BufferSize size) {
-    write_register_u8(Registers::Socket::TxBufferSize, socket, static_cast<uint8_t>(size));
+void W5500::set_socket_tx_buffer_size(uint8_t socket,
+                                      Registers::Socket::BufferSize size) {
+    write_register_u8(Registers::Socket::TxBufferSize, socket,
+                      static_cast<uint8_t>(size));
 }
 
-void W5500::set_socket_rx_buffer_size(uint8_t socket, Registers::Socket::BufferSize size) {
-    write_register_u8(Registers::Socket::RxBufferSize, socket, static_cast<uint8_t>(size));
+void W5500::set_socket_rx_buffer_size(uint8_t socket,
+                                      Registers::Socket::BufferSize size) {
+    write_register_u8(Registers::Socket::RxBufferSize, socket,
+                      static_cast<uint8_t>(size));
 }
 
 void W5500::write_register(CommonRegister reg, const uint8_t *data) {
@@ -136,10 +147,9 @@ void W5500::write_register(CommonRegister reg, const uint8_t *data) {
     cmd[0] = 0x0;
     cmd[1] = reg.offset;
     // Control byte = bank select + R/W + OP mode
-    cmd[2] = (
-        (COMMON_REGISTER_BANK << 3) |
-        (1 << 2) | // Write
-        0x0 // Always use VDM mode
+    cmd[2] = ((COMMON_REGISTER_BANK << 3) | // Socket
+              (1 << 2) |                    // Write
+              0x0                           // Always use VDM mode
     );
     // Copy data to write to cmd buffer
     memcpy(&cmd[3], data, reg.size);
@@ -149,17 +159,17 @@ void W5500::write_register(CommonRegister reg, const uint8_t *data) {
     _bus.chip_deselect();
 }
 
-void W5500::write_register(SocketRegister reg, uint8_t socket_n, const uint8_t *data) {
+void W5500::write_register(SocketRegister reg, uint8_t socket_n,
+                           const uint8_t *data) {
     const uint8_t cmd_size = 3 + reg.size;
     uint8_t cmd[cmd_size];
     // Set the register offset
     cmd[0] = 0x0;
     cmd[1] = reg.offset;
     // Control byte = bank select + R/W + OP mode
-    cmd[2] = (
-        (SOCKET_REG(socket_n) << 3) |
-        (1 << 2) | // Write
-        0x0 // Always use VDM mode
+    cmd[2] = ((SOCKET_REG(socket_n) << 3) | // Socket
+              (1 << 2) |                    // Write
+              0x0                           // Always use VDM mode
     );
     // Copy data to write to cmd buffer
     memcpy(&cmd[3], data, reg.size);
@@ -174,10 +184,9 @@ void W5500::read_register(CommonRegister reg, uint8_t *data) {
     uint8_t cmd[3];
     cmd[0] = 0x0;
     cmd[1] = reg.offset;
-    cmd[2] = (
-        (COMMON_REGISTER_BANK << 3) |
-        (0 << 2) | // Read
-        0x0 // Always use VDM mode
+    cmd[2] = ((COMMON_REGISTER_BANK << 3) | // Socket
+              (0 << 2) |                    // Read
+              0x0                           // Always use VDM mode
     );
     _bus.chip_select();
     _bus.spi_xfer(cmd, nullptr, 3);
@@ -192,10 +201,9 @@ void W5500::read_register(SocketRegister reg, uint8_t socket_n, uint8_t *data) {
     uint8_t cmd[3];
     cmd[0] = 0x0;
     cmd[1] = reg.offset;
-    cmd[2] = (
-        (SOCKET_REG(socket_n) << 3) |
-        (0 << 2) | // Read
-        0x0 // Always use VDM mode
+    cmd[2] = ((SOCKET_REG(socket_n) << 3) | // Socket
+              (0 << 2) |                    // Read
+              0x0                           // Always use VDM mode
     );
     _bus.chip_select();
     _bus.spi_xfer(cmd, nullptr, 3);
@@ -206,7 +214,7 @@ void W5500::read_register(SocketRegister reg, uint8_t socket_n, uint8_t *data) {
 }
 
 void W5500::set_interrupt_mask(
-        std::initializer_list<Registers::Common::InterruptMaskFlags> flags) {
+    std::initializer_list<Registers::Common::InterruptMaskFlags> flags) {
     uint8_t mask = 0x0;
     for (auto flag : flags) {
         mask |= static_cast<uint8_t>(flag);
@@ -236,7 +244,8 @@ void W5500::send(uint8_t socket) {
     send_socket_command(socket, Registers::Socket::CommandValue::SEND);
 }
 
-size_t W5500::send(uint8_t socket, const uint8_t *buffer, size_t offset, size_t size) {
+size_t W5500::send(uint8_t socket, const uint8_t *buffer, size_t offset,
+                   size_t size) {
     // Send with arguments: copy the data to the IC using write(), then
     // immediately trigger a flush.
     const size_t written = write(socket, buffer, offset, size);
@@ -244,7 +253,8 @@ size_t W5500::send(uint8_t socket, const uint8_t *buffer, size_t offset, size_t 
     return written;
 }
 
-size_t W5500::write(uint8_t socket, const uint8_t *buffer, size_t offset, size_t size) {
+size_t W5500::write(uint8_t socket, const uint8_t *buffer, size_t offset,
+                    size_t size) {
     // Get max possible tx size
     const uint16_t free_buffer_size = get_tx_free_size(socket);
 
@@ -259,10 +269,9 @@ size_t W5500::write(uint8_t socket, const uint8_t *buffer, size_t offset, size_t
     const uint16_t write_offset = write_pointer + offset;
     cmd[0] = (write_offset >> 8) & 0xFF;
     cmd[1] = write_offset & 0xFF;
-    cmd[2] = (
-        (SOCKET_TX_BUFFER(socket) << 3) |
-        (1 << 2) | // Write
-        0x0 // Always use VDM mode
+    cmd[2] = ((SOCKET_TX_BUFFER(socket) << 3) | // Select socket
+              (1 << 2) |                        // Write
+              0x0                               // Always use VDM mode
     );
     _bus.chip_select();
 
@@ -270,7 +279,8 @@ size_t W5500::write(uint8_t socket, const uint8_t *buffer, size_t offset, size_t
     _bus.spi_xfer(cmd, nullptr, 3);
 
     // Send as much data as we can
-    const uint16_t bytes_to_send = (size <= free_buffer_size ? size : free_buffer_size);
+    const uint16_t bytes_to_send =
+        (size <= free_buffer_size ? size : free_buffer_size);
     _bus.spi_xfer(buffer, nullptr, bytes_to_send);
 
     // Done
@@ -301,10 +311,9 @@ size_t W5500::peek(uint8_t socket, uint8_t *buffer, size_t size) {
     uint16_t read_offset = get_rx_read_pointer(socket);
     cmd[0] = (read_offset >> 8) & 0xFF;
     cmd[1] = read_offset & 0xFF;
-    cmd[2] = (
-        (SOCKET_RX_BUFFER(socket) << 3) |
-        (0 << 2) | // Read
-        0x0 // Always use VDM mode
+    cmd[2] = ((SOCKET_RX_BUFFER(socket) << 3) | // Select socket
+              (0 << 2) |                        // Read
+              0x0                               // Always use VDM mode
     );
     _bus.chip_select();
 
@@ -317,7 +326,7 @@ size_t W5500::peek(uint8_t socket, uint8_t *buffer, size_t size) {
     // Done
     _bus.chip_deselect();
 
-    // Return the amount of bytes that were actually sent
+    // Return the amount of bytes that were actually read
     return size;
 }
 
@@ -383,7 +392,8 @@ void W5500::write_register_u8(SocketRegister reg, uint8_t socket, uint8_t val) {
     write_register(reg, socket, &val);
 }
 
-void W5500::write_register_u16(SocketRegister reg, uint8_t socket, uint16_t value) {
+void W5500::write_register_u16(SocketRegister reg, uint8_t socket,
+                               uint16_t value) {
     uint8_t buf[2];
     buf[0] = (value >> 8) & 0xFF;
     buf[1] = value & 0xFF;
@@ -422,36 +432,43 @@ uint16_t W5500::get_rx_write_pointer(uint8_t socket) {
     return read_register_u16(Registers::Socket::RxWritePointer, socket);
 }
 
-Registers::Socket::InterruptRegisterValue W5500::get_socket_interrupt_flags(uint8_t socket) {
+Registers::Socket::InterruptRegisterValue
+W5500::get_socket_interrupt_flags(uint8_t socket) {
     const uint8_t val = read_register_u8(Registers::Socket::Interrupt, socket);
     return Registers::Socket::InterruptRegisterValue(val);
 }
 
-bool W5500::socket_has_interrupt_flag(uint8_t socket, Registers::Socket::InterruptFlags flag) {
+bool W5500::socket_has_interrupt_flag(uint8_t socket,
+                                      Registers::Socket::InterruptFlags flag) {
     return get_socket_interrupt_flags(socket) & flag;
 }
 
-void W5500::clear_socket_interrupt_flag(uint8_t socket, Registers::Socket::InterruptFlags flag) {
-    write_register_u8(Registers::Socket::Interrupt, socket, static_cast<uint8_t>(flag));
+void W5500::clear_socket_interrupt_flag(
+    uint8_t socket, Registers::Socket::InterruptFlags flag) {
+    write_register_u8(Registers::Socket::Interrupt, socket,
+                      static_cast<uint8_t>(flag));
 }
 
 void W5500::set_phy_mode(Registers::Common::PhyOperationMode mode) {
-    uint8_t current_phy_settings = read_register_u8(Registers::Common::PhyConfig);
+    uint8_t current_phy_settings =
+        read_register_u8(Registers::Common::PhyConfig);
     const uint8_t new_phy_settings = (
         // Clear the old mask from the phy register
         (current_phy_settings & ~(0b111 << 3)) |
         // Set the operation mode bit to use software control instead of HW pins
-        static_cast<uint8_t>(Registers::Common::PhyConfigFlags::OPERATION_MODE) |
+        static_cast<uint8_t>(
+            Registers::Common::PhyConfigFlags::OPERATION_MODE) |
         // Set the new mode mask
-        (static_cast<uint8_t>(mode) << 3)
-    );
+        (static_cast<uint8_t>(mode) << 3));
     write_register_u8(Registers::Common::PhyConfig, new_phy_settings);
 
     // After changing the PHY settings, we need to reset the PHY by
     // clearing the RESET bit
     current_phy_settings = read_register_u8(Registers::Common::PhyConfig);
-    write_register_u8(Registers::Common::PhyConfig, new_phy_settings & ~(
-                static_cast<uint8_t>(Registers::Common::PhyConfigFlags::RESET)));
+    write_register_u8(
+        Registers::Common::PhyConfig,
+        new_phy_settings &
+            ~(static_cast<uint8_t>(Registers::Common::PhyConfigFlags::RESET)));
 
     // And then setting the reset bit again
     current_phy_settings = read_register_u8(Registers::Common::PhyConfig);

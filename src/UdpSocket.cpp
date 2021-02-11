@@ -24,7 +24,7 @@ bool UdpSocket::has_packet() {
     return rx_bytes >= udp_header_size;
 }
 
-int UdpSocket::peek_packet(uint8_t source_ip[4], uint16_t& source_port) {
+int UdpSocket::peek_packet(uint8_t source_ip[4], uint16_t &source_port) {
     // If there's no data, return -1
     if (!has_packet()) {
         return -1;
@@ -44,7 +44,7 @@ int UdpSocket::peek_packet(uint8_t source_ip[4], uint16_t& source_port) {
     return (buf[6] << 8 | buf[7]);
 }
 
-int UdpSocket::read_packet_header(uint8_t source_ip[4], uint16_t& source_port) {
+int UdpSocket::read_packet_header(uint8_t source_ip[4], uint16_t &source_port) {
     // If there's no data, return -1
     if (!has_packet()) {
         return -1;
@@ -83,12 +83,8 @@ void UdpSocket::flush() {
     _packet_bytes_remaining = 0;
 }
 
-int UdpSocket::remaining_bytes_in_packet() {
-    return _packet_bytes_remaining;
-}
+int UdpSocket::remaining_bytes_in_packet() { return _packet_bytes_remaining; }
 
-void UdpSocket::skip_to_packet_end() {
-    read(nullptr, _packet_bytes_remaining);
-}
+void UdpSocket::skip_to_packet_end() { read(nullptr, _packet_bytes_remaining); }
 
 } // namespace W5500
